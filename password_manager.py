@@ -1,28 +1,48 @@
-################################################
-## 
-## This is a basic password manager made in python
-## Project start: 08/01/2022 6:00am
-################################################
+###############################################################################
+##                            %% 🔐 PASSWORD MANAGER 🔐 %%
+##                                  © Asanka Sovis
+##
+##                   This is a basic password manager made in python.
+##                                       NOTE:
+##                   This is still under development and must not be
+##                          used as primary password manager.
+##                            *Made with ❤️ in Sri Lanka
+##
+##     - Author: Asanka Sovis
+##     - Project start: 08/01/2022 6:00am
+##     - Version: 0
+##     - License: MIT Open License
+###############################################################################
 
-import json
-import base64
-import hashlib
-import os
-import getpass
-import random
-import string
-from datetime import datetime
+import json # Handle JSON format
+import base64 # Handle base64 conversions
+import os # Access OS functions
+import getpass # Input passwords
+import random # Generate random data
+import string # Use string commands
+from datetime import datetime # Use date and time
+
+# Fernet encryption module
+# NOTE: Cryptography is NOT an included library. It needs to be installed
+#       by pip install cryptography
+# NOTE: Implement a check in place
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from base64 import b64encode
-from os.path import exists
 
-version = 'v1.0'
-preference = {'salt': b64encode(os.urandom(16)).decode('utf-8')}
-database = {}
+from base64 import b64encode # Loading only the base64 encoding function
+from os.path import exists # Used to check if files exist
+
+####################################################
+##### GLOBAL VARIABLES
+
+version = 'v0' # Version number of the application. Set accordingly
+preference = {'salt': b64encode(os.urandom(16)).decode('utf-8')} # A salt is generated in case
+database = {} # This is the database used in the application
 
 strVals = {
+    # This database hold all the strings used in messages and inputs throughouts the application
+    # These can later be set to load from a text file for ease
     'existing_username': 'Error: The username already exists in the database under this platform',
     'incorrect_password': 'Error: The password you entered is incorrect',
     'unknown_commands': 'Unknown Command',
@@ -41,99 +61,196 @@ strVals = {
     'password_added_successfully': 'Password added successfully',
     'new_password_warning': 'Platform: <p> Username: <u>\nDo you wish to procees?Y/N,S to show password',
     'show_password': 'Password: <p>',
-    'password_abort': 'User rejected to save password'
+    'password_abort': 'User rejected to save password',
+    'duplicate_user_platform': 'The same user exist in the platform'
 }
 
+####################################################
+##### GENERAL FUNCTIONS
+
 def initialize():
-    # Initializes the application
-    # Loads preference data and the database
+    # INITIALIZES THE APPLICATION
+    # This includes loading preference data and the database
+    # Accepts none / Returns null
     global preference, database
 
-    preference['key'] = getKey('password').decode()
-
     if not(exists('database.en')):
+        # If the database doesn't exist, ask user if they like to load an existing database
+        # NOTE: Implement this functionality!
         print('')
 
     databaseFile = open('database.en','r')
+    # Opens the database 01. to create an empty database if one doesn't exist, 02. to check if it's empty
 
-    if not(databaseFile.read() == ''):
+    if databaseFile.read() != '':
+        # If the database is not empty we read the database and dump the contents to our dictionary
+        # NOTE: Implement error handling!
         databaseFile = open('database.en','r')
         database = json.loads(databaseFile.read())
 
-    if not(exists('preferences.en')):
-        print('')
+    # if not(exists('preferences.en')):
+        # If the preferences file doesn't exist, we can use this section to do something
+        # NOTE: For now it's not doing anything. Can activate if needed
+    #     print('')
     
     preferenceFile = open('preferences.en','r')
+    # Opens the preference file 01. to create an empty file if one doesn't exist, 02. to check if it's empty
 
-    if preferenceFile.readline() == '':
+    if preferenceFile.read() == '':
+        # If the preference file is empty we:
+        #       01. Generate a new key from a new password and store it on the preference dictionary
+        #       02. Open the preference file to create one if needed
+        #       03. Dump preference data to this file
+        # NOTE: A default random salt is generated at the start of the application
+        # NOTE: If the preference file is empty, we must ask the user to create a new password
+        #       and this password MUST be the one used to generate the key. Implement this
+        #       functionality!
+        # NOTE: Implement error handling!
+        preference['key'] = getKey('password').decode()
         preferenceFile = open('preferences.en','w+')
         preferenceFile.write(json.dumps(preference))
     else:
+        # If the preference file is not empty we dump all content to the preference dictionary
+        # NOTE: Implement error handling!
         preferenceFile = open('preferences.en','r')
         preference = json.loads(preferenceFile.read())
 
-
-def about():
-    # Show about data
-    print(strVals['about_string'])
-
 def encrypt(message, password):
-    # Encrypts data
+    # ENCRYPTING DATA
+    # This function handles the encrypting of data. It accesses the getFernet() function with provided password to get
+    # the encryption module and uses it to encrypt any arbitrary message sent for encrypting
+    # Accepts the message as String, password as String / Returns the encrypted data as base64 encoded String
+    # NOTE: Implement error handling!
     return getFernet(password).encrypt(message.encode()).decode()
 
 def decrypt(message, password):
-    # Decrypts data
+    # DECRYPTING DATA
+    # This function handles the decrypting of data. It accesses the getFernet() function with provided password to get
+    # the encryption module and uses it to decrypt any fernet encrypted message sent for decrypting
+    # Accepts the encoded message as String, password as String / Returns the decrypted data as String
+    # NOTE: Implement error handling!
     return getFernet(password).decrypt(message.encode()).decode()
 
 def getKey(password):
-    # Gets the key from a given salt and password
+    # GENERATES A KEY FROM PASSWORD
+    # This function generates a key from a given password
+    # The keys are according to Fernet specs https://github.com/fernet/spec/blob/master/Spec.md
+    # Key Format : Signing-key (128 bit) ‖ Encryption-key (128 bit)
+    # Accepts password as String / Return Fernet key as base64 encoded String
+    # NOTE: Implement error handling and progress reports!
+
     global preference
+
     kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=bytes(preference['salt'], 'utf-8'),
-        iterations=390000,
+        algorithm = hashes.SHA256(),
+        length = 32,
+        salt = bytes(preference['salt'], 'utf-8'),
+        iterations = 390000,
     )
+
     return base64.urlsafe_b64encode(kdf.derive(password.encode()))
 
 def getFernet(password):
-    # Gets the fernet
+    # GET THE FERNET
+    # This function generates a Fernet module from a given password. It access the getKey() function to
+    # get a Fernet key which is used to generate and return a Fernet
+    # Accepts password as String / Returns the Fernet as module
+    # NOTE: Implement error handling!
+
     key = getKey(password)
+
     return Fernet(key)
 
 def checkPassword():
-    # Validates the password
-    password = getpass.getpass(strVals['password_string'])
-    correct = (getKey(password).decode() == preference['key'])
+    # VALIDATE A USER ENTERED PASSWORD
+    # This function asks the user to enter their password and validate it using the stored hash of the
+    # password. If it doesn't match, it notifies the user and returns the result
+    # Accepts none / Returns tuple (whether validation was successful as Boolean[True-validated/False-Invalidated],
+    #                       password as String)
+    # NOTE: If the validation falied, the password in returned tuple is empty
+
+    password = getpass.getpass(strVals['password_string']) # We use getpass instead of input for safety
+    # NOTE: getpass hides the password while the user enteres it
+    correct = (getKey(password).decode() == preference['key']) # Compare the stored key and hashed password to validate
+    # if the user entered password is valid. This is stored in correct variable as boolean for reference
 
     if not(correct):
+        # In case the password is invalid we show error message
         print(strVals['incorrect_password'])
 
+    # Returning the results
     return (correct, password)
 
 def getEncPlatformNames(password, platform):
+    # GET THE **ENCRYPTED** PLATFORM NAMES FROM DATABASE
+    # This function scans the database and retrievs the platforms from it
+    # NOTE: These data are encrypted and thus the returned data is ENCRYPTED
+    # NOTE: This only returns the list of encrypted platform names as String
+    # NOTE: In theory, the platform name must appear only once in the database but still we do
+    #       a looping check for added safety and retrieve every appearance from a loop
+    # NOTE: This function can be used to validate if a platform already exists in the database
+    # Accepts password as String, platform as String / Returns the retrieved data as list
+
     platformData = []
 
     for item in database.keys():
+        # We first take out all the keys in the database[Platforms] and for each one, we decrypt
+        # it using the password and compare it with the platform name sent for reference.
+        # NOTE: The reason why we have to decrypt each item instead of encrypting the provided
+        #       platform once and comparing it with the existing encrypted items, is because with
+        #       Fernet encrypting, the resulting encrypting is different for the same item at different
+        #       times
         if decrypt(item, password) == platform:
             platformData.append(item)
     
     return platformData
 
 def getPlatform(password, platform):
+    # GET THE DATA ASSOCIATED WITH A PLATFORM FROM DATABASE
+    # This function scans the database and retrievs the platforms from it
+    # Unlike the getEncPlatformNames() function, this returns a list of dictionaries that
+    # Contain the data available under this platform. This include the usernames as keys
+    # and the data of relevant user name as values of each key. Refer to the database structure
+    # for more details. Of course this data is also encrypted
+    # NOTE: In theory, the platform name must appear only once in the database but still we do
+    #       a looping check for added safety and retrieve every appearance from a loop
+    # NOTE: This function can be used to validate if a platform already exists in the database
+    #       but still the getEncPlatformNames() is recommended for efficiency
+    # Accepts password as String, platform as String / Returns the retrieved data as list
+
     platformData = []
 
     for item in database.keys():
+        # We first take out all the keys in the database[Platforms] and for each one, we decrypt
+        # it using the password and compare it with the platform name sent for reference.
+        # NOTE: The reason why we have to decrypt each item instead of encrypting the provided
+        #       platform once and comparing it with the existing encrypted items, is because with
+        #       Fernet encrypting, the resulting encrypting is different for the same item at different
+        #       times
         if decrypt(item, password) == platform:
             platformData = platformData + database[item]
     
     return platformData
 
 def getUserData(password, platform, username):
+    # EXTRACT USER DATA FROM PLATFORM
+    # This function extracts the data (password, time, etc.) from the database for a given username
+    # and platform. It uses the getPlatform() function to extract the data for a particular platform
+    # and then use this data to extract the information for that particular username.
+    # NOTE: The extracted data is still encrypted and in order to use it, it has to be decrypted
+    # Accepts password as String, platform as String, username as String / Returns encrypted data
+    #                   as list of tuples of user information
+    #       [(encPassword for 1, encTime for 1), (encPassword for 2, encTime for 2), ...]
+
     platformData = getPlatform(password, platform)
     userData = []
 
     for dict in platformData:
+        # For each username dictionary returned, we iterate through them and for each username
+        # we decrypt it and compare it with the provided username. If they match, the values
+        # (tuples with information) is added to a list which is returned back
+        # NOTE: Since JSON Stores tuples as lists we also convert the list to tuple. This
+        #       is not a must but is efficient as information stored is in a fixed structure
         for item in dict.keys():
             if decrypt(item, password + platform) == username:
                 userData.append(tuple(dict[item]))
@@ -141,39 +258,90 @@ def getUserData(password, platform, username):
     return userData
 
 def decryptItem(data, password, platform, username):
+    # DECRYPT DATA
+    # This function decrypts the data that is given to it using the password, platform and username
+    # NOTE: Data is in tuple form. This is so that encrypted data retrieved from getUserData() function
+    #       can be quickly decrypted and retrieved with ease
+    # Accets data as a tuple of Strings (Lists is also acceptable but is not what is intended),
+    #           password as String, platform as String, username as String / Returns the same
+    #           data in the same structure but decrypted and as a tuple
+
     decryptedList = []
+
     for item in data:
+        # We perform the decryption for each item in the tuple (or list) and add it to a temporary
+        # list
         decryptedList.append(decrypt(item, password + platform + username))
+
     return tuple(decryptedList)
 
 def getUserInformation(password, platform, username):
+    # GETS USER INFORMATION
+    # This function decrypts the data from getUserData() function using the decryptItem()
+    # function. This function is useful to directly get the decrypted information of the user
+    # without any steps, as this handles the in between step of decrypting each item in
+    # the data
+    # Accepts password as String, platform as String, username as String / Returns decrypted
+    #       user information as list of tuples of user information
+    #       [(password for 1, time for 1), (password for 2, time for 2), ...]
+
     userData = getUserData(password, platform, username)
     decUserData = []
 
     for item in userData:
+        # For each item in user data we got from the getUserData() function, we decrypts them and
+        # from the decryptItem() function and add the returned tuple to a list to be then returned
+        # back
         decUserData.append(decryptItem(item, password, platform, username))
 
     return decUserData
 
 def addPassword(passcode, platform, username, password):
-    # Adds new information to the database
-    time = datetime.now()
+    # ADDS NEW INFORMATION TO THE DATABASE
+    # This function can be used to add an information set to the database. It will handle
+    # the encryption of data, duplicates and writing to the database itself
+    # Accepts passcode as String, platform as String, username as String, password as String
+    # NOTE: In this function, the password is the password that the user needs to store
+    #       not the password used to access the database. That is the passcode here
+
+    time = datetime.now() # We also store the date and time for validating purposes
+
+    # Below, all data is encrypted according to the method discussed. Refer to documentation
+    # for more information
     encPlatform = encrypt(platform, passcode)
     encUsername = encrypt(username, passcode + platform)
     encPassword = encrypt(password, passcode + platform + username)
     enctime = encrypt(time.strftime("%Y-%m-%d %H:%M:%S"), passcode + platform + username)
 
+    # A profile is created for that particular username as a dictionary that has the username
+    # as the key and information in the tuple form
     profile = {encUsername : (encPassword, enctime)}
 
+    # Here we check if the platform is already included in the database. We store all the
+    # instances of this platform appearing in the database as a list using the getEncPlatformNames()
+    # function.
+    # NOTE: In theory, there should be only one instance but we still check for multiple just in case
+    # NOTE: The reason why we do is so that we can store the new profile data under the same platform
+    #       instead of creating new instance of this platform
+    # NOTE: A platform can have multiple user profiles and multiple user profiles with the same username
+    #       can be created under different platforms. However, same platform MUST NOT hold multiple
+    #       profiles under the same username. Checks to mitigate this is taken here
     platformInstances = getEncPlatformNames(passcode, platform)
 
     if len(getUserData(passcode, platform, username)) == 0:
+        # We first check if a user profile exist under the same username within this platform. This is
+        # done by using the count of lists returned by the getUserData() function. If so, we throw an
+        # error. Otherwise we check if the platform is a new platform. This is done by using the count
+        # of platformInstances list. If so we use the encrypted platform name, or else we use the
+        # first instance of platform name we get and discard the encrypted platform name we made before
+        # Then we append the profile to the list
         if len(platformInstances) == 0:
             database[encPlatform] = [profile]
         else:
             print(platformInstances[0])
             database[platformInstances[0]].append(profile)
 
+        # Once updating the loaded database, we dump it back to the physical database to store
         databaseFile = open('database.en','w+')
         databaseFile.write(json.dumps(database))
     else:
@@ -182,123 +350,270 @@ def addPassword(passcode, platform, username, password):
     # print(database)
     # print('\n\n')
 
+####################################################
+###### PASSWORD HANDLING
+
 def manualPassword():
-    password1 = getpass.getpass(strVals['input_manual_password'])
+    # CREATE A PASSWORD MANUALLY
+    # This function is used if the user needs to create a password manually. This
+    # handles all the inputs and messaging
+    # Accepts none / Returns tuple of the form (success as Boolean, entered password as String)
+    # NOTE: We ask user to enter the password twice in order to make sure no errors occur
+    # NOTE: Success is true if the password entered is acceptable and false if not. Check below
+    #       for how it is checked
+    # NOTE: Password is returned only if successful, otherwise returned string is empty
+
+    # In order to accept the password, it must not be empty and also both times the user
+    # enters the password must match
+    password1 = getpass.getpass(strVals['input_manual_password']) # First entry
+
     if password1 == '':
+        # We first check if the password is empty. If so we throw an error and return fail
         print(strVals['empty_password'])
         return (False, '')
-    password2 = getpass.getpass(strVals['reenter_manual_password'])
+
+    password2 = getpass.getpass(strVals['reenter_manual_password']) # Second entry
+
     if password1 != password2:
+        # Next we make sure both times the user entered the password, they match if not
+        # we return an error and exit. Otherwise we return success and the password
         print(strVals['password_mismatch'])
         return (False, '')
+
     return (True, password1)
 
 def randomPassword(length = 12, uppercase = True, numbers = True, specialChar = True):
-    sourceStr = string.ascii_lowercase
+    # GENERATE A PASSWORD AUTOMATICALLY
+    # This function generates a password automatically at random for security
+    # It uses a list of characters from eacj type of characters and uses the random module
+    # to randomly assign to a string
+    # Accepts length as int(Default 12), uppercase as Boolean(Default True), numbers as
+    # Boolean(Default True), specialChar as Boolean(Default True) / Return password as String
+    # These variables can be changed to customize the password style
+
+    sourceStr = string.ascii_lowercase # Include lowercase in the charset
+    # NOTE: Lowercase chars MUST be included
+
     if uppercase:
+        # Include Uppercase in the charset
         sourceStr += string.ascii_uppercase
     if numbers:
+        # Include Numbers in the charset
         sourceStr += string.digits
     if specialChar:
+        # Include Special Characters and Punctuations in the charset
         sourceStr += string.punctuation
 
     while(len(sourceStr) < length):
+        # Generates a charset bigger than the expected length of the password
+        # This is done to mitigate issues where charset might be too small to
+        # jumble into a password. random.sample() function assigns chars at
+        # random and doesn't reuse the same character which means an error can
+        # occur if the charset is smaller than the password.
+        # NOTE: This is in generally not possible as lowercase is mandatory and
+        # passwords are smaller than 26 however this put in place just in case
         sourceStr = sourceStr * 2
 
     return("".join(random.sample(sourceStr, length)))
 
+####################################################
+###### ENTRY POINT TO THE APPLICATION
+
 def entryPoint():
-    # Entry point of the application
+    # MAIN FUNCTION THAT RUNS ON LAUNCH
+    # This function runs in order to parse commands issued by the user
+    # It will run until an error occur or user enter the exit command
+    # Accepts none / Return null
+
     while(True):
-        response = input('>>> ').split(" ")
+        # Application loop
+        response = input('>>> ').split(" ") # Parsing the response
         args = []
+
         if len(response) > 0:
+            # Arguements passed are parsed and assigned to a variable as a list
+            # of strings and the command is stored in the response variable as
+            # a String
             args = response[1:]
+
         response = response[0]
 
+        # This section parses the commands
         if(response == 'exit'):
+            # Exit command. When given the application exits
             if database != '':
+                # We also make sure to destroy the database
                 database.close()
             quit()
+
         elif(response == 'about'):
-            about()
+            # About command. Opens the about section of the application
+            showAbout()
+
         elif(response == 'version'):
-            print(strVals['version_string'].replace('<v>', version))
+            # Version command. Shows the version details of the application
+            showVersion()
+
         elif(response == 'encrypt'):
+            # Encrypt command. Simply encrypts a provided string. Only
+            # used for debug purposes
             password = checkPassword()
+
             if password[0]:
                 message = input('Message: ')
                 print(encrypt(message, password[1]))
+
         elif(response == 'decrypt'):
+            # Decrypt command. Simply decrypts a provided string. Only
+            # used for debug purposes
             password = checkPassword()
+
             if password[0]:
                 message = input('Fernet: ')
                 print(decrypt(message, password[1]))
+
         elif(response == 'validate'):
+            # Validates the given password. Only used for debug purposes
             print(checkPassword())
+
         elif(response == 'add'):
+            # Add command. Adds a new password to the database
             newPassword(args)
+
         else:
+            # If unknown command is issued, show error message
             print(strVals['unknown_commands'])
 
 ####################################################
-## Interface
+###### INTERFACE FUNCTIONS
+
+def showVersion():
+    # SHOW VERSION DATA
+    # This function shows the version of the application to the user
+    # Accept none / Return null
+    # NOTE: This section still needs improving!
+    print(strVals['version_string'].replace('<v>', version))
+
+def showAbout():
+    # SHOW ABOUT DATA
+    # This function is used to print about information to the user
+    # Accepts none / Returns null
+    # NOTE: This section still needs improving!
+    print(strVals['about_string'])
 
 def newPassword(args):
+    # NEW PASSWORD FUNCTION
+    # Handles the user side tasks to add a new password to the system. This will handle messages,
+    # error checks, and inputs.
+    # Accepts args as list of Strings / Return success as Boolean
+    # NOTE: This does not handle the technical work. Refer the addPassword() for that
+
+    # We first ask user to validate by entering the password
     passcode = checkPassword()
     manual = '-m' in args
 
     if passcode[0]:
-        password = (False, '')
+        # If the user entered the incorrect password, we throw an error and return False
+        password = (False, '') # This is NOT the users password. This is the variable to
+        # store the password the user want to store
+
         if not(manual):
-             # (length, uppercase, numbers, specialChar)
+            # Here we check of the user requested manual password. If not we first check if
+            # user has entered any parameters. If so we first extract the length of the password
+            # from first arguement as this is what the first arguement must be if arguements are
+            # present. The rest are also checked. If no arguements are passed, we generate a
+            # password with default arguements. We also set First value of password tuple to
+            # know later that password is auto generated
             if (len(args) > 0):
                 try:
                     passwordParams = (int(args[0]), '-u' in args, '-n' in args, '-c' in args)
+                    # (length, uppercase, numbers, specialChar)
                     password = (True, randomPassword(passwordParams[0], passwordParams[1], passwordParams[2], passwordParams[3]))
 
                 except Exception:
                     print(strVals['invalid_new_password_args'])
                     return False
+            else:
+                password = (True, randomPassword())
 
+        # Here we get platform and username of the desired account
         platform = input(strVals['input_platform'])
         username = input(strVals['input_username'])
+
+        # Here we check if either of them are empty or both combined make a duplicate
+        # If so, we discard everything and return back
         if ((platform == '') or (username == '')):
             print(strVals['invalid_platform_inputs'])
             return False
-        password = manualPassword()
+
+        elif len(getUserData(passcode[1], platform, username)) > 0:
+            print(strVals['duplicate_user_platform'])
+            return False
+
+        if manual:
+            # We check again for manual and if so, we send to the manualPassword() function
+            # that handle the manual passwords. This is done later so that for an auto
+            # generation, few args has to be checked first and if an error exist in the
+            # arguements passed, we must show an error and exit BEFORE we ask for user input
+            # On the other hand, if manual, the password has to be handled AFTER user enters
+            # the platform and username data and these are validated
+            password = manualPassword()
+
         if password[0]:
+            # Here we check if the new password is ready for assigning. This is put in place
+            # so that we know if auto generation failed or manual password attempt failed.
+            # This makes sure no data is entered to the database in case of an erroneous
+            # password
             try:
+                # First we show a warning asking whether the user is ok with the new password
                 warning = input(strVals['new_password_warning'].replace('<p>', platform).replace('<u>', username))
+
+                # We loop to make sure incorrect inputs are not accepted. Only 'Y' (Yes), 'N' (No)
+                # and 'S' (Show password) is acceptable. Y and N can only exit from the loop
                 while (not((warning == 'Y') or (warning == 'N'))):
+                    # Entering 'S' will show the user the new password that the application is
+                    # ready to store. This is not shown by default for security purposes.
                     if(warning == 'S'):
                         print(strVals['show_password'].replace('<p>', password[1]))
+                    
                     warning = input(strVals['new_password_warning'].replace('<p>', platform).replace('<u>', username))
+
                 if (warning == 'Y'):
+                    # Finally we check if 'Y' is given which means that the user accepts
+                    # NOTE: Need improvements here. Decide if to show or not show password.
+                    #       Also implement function to automatically copy password to clipboard!
                     addPassword(passcode[1], platform, username, password[1])
                     print(strVals['password_added_successfully'])
+
                 else:
+                    # In case the reply was otherwise, we show an aborted message and exit
                     print(strVals['password_abort'])
+
                 return True
+
             except Exception as err:
+                # This is for error handling
                 print(strVals['fatal_error'].replace('<l>', 'addPassword').replace('<e>', err))
+
                 return False
+
     return False
-        
-                    
-                
-                
-
-
 
 ####################################################
-## Application
+##### Application
 
+# First we initialize the application
 initialize()
+# Then we enter into the entry point to continue with the application
 # entryPoint()
+
+####################################################
+##### DEBUG CODE
+##### NOTE: COMMENT AFTER TESTING
+
 # newPassword('password', 'facebook', 'asanka', 'hello')
 # newPassword('password', 'facebook', 'akash', 'hello')
 # print(getPlatform('password', 'facebook'))
 # print('\n\n')
 print(getUserInformation('password', 'A', 'B'))
-#print(newPassword([]))
+# print(newPassword([]))
