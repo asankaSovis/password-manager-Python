@@ -30,6 +30,12 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+# Pyperclip clipboard module
+# NOTE: Pyperclip is NOT an included library. It needs to be installed
+#       by pip install pyperclip
+# NOTE: Implement a check in place
+import pyperclip as pc
+
 from base64 import b64encode # Loading only the base64 encoding function
 from os.path import exists # Used to check if files exist
 
@@ -47,6 +53,9 @@ strVals = {
     'incorrect_password': 'Error: The password you entered is incorrect',
     'unknown_commands': 'Unknown Command',
     'invalid_new_password_args': 'Invalid arguements for new password',
+    'invalid_edit_password_args': 'Invalid arguements for edit password',
+    'invalid_view_password_args': 'Invalid arguements for accessing password',
+    'invalid_delete_password_args': 'Invalid arguements for deleting password',
     'about_string': 'Password Manager',
     'version_string': 'Password Manager <v>',
     'password_string': 'Password: ',
@@ -59,18 +68,27 @@ strVals = {
     'password_mismatch': 'The two passwords you entered did not match. Please try again',
     'fatal_error': 'Fatal Error: <l> | <e>',
     'password_added_successfully': 'Password added successfully',
+    'password_changed_successfully': 'Password changed successfully',
     'password_deleted_successfully': 'Password deleted successfully',
-    'new_password_warning': 'Platform: <p> | Username: <u>\nDo you wish to proceed?Y/N,S to show password ',
-    'delete_password_warning': 'WARNING: The following Profile will be deleted PERMANENTLY\nPlatform: <p> | Username: <u>\nDo you wish to proceed?Y/N ',
+    'show_username_platform': 'Platform: <p> | Username: <u>',
+    'edit_password_warning': 'WARNING: The password will be PERMANENTLY changed in the following Profile',
+    'delete_password_warning': 'WARNING: The following Profile will be deleted PERMANENTLY',
+    'proceed_warning_question': 'Do you wish to proceed?Y/N ',
+    'proceed_warning_question_with_show': 'Do you wish to proceed?Y/N,S to show password ',
     'show_password': 'Password: <p>',
-    'password_abort': 'User rejected the operation',
+    'show_password_with_info': 'Password: <p>           | Added Date: <d>',
+    'user_abort': 'User rejected the operation',
     'duplicate_user_platform': 'The same user exist in the platform',
+    'no_user_platform': 'This user is not under this platform',
     'non_existent_platform': 'The platform does not exist',
-    'non_existent_username': 'THe username does not exist under the platform'
+    'non_existent_username': 'THe username does not exist under the platform',
+    'same_password_to_edit': 'The password you entered is the same as the existing password. Modification did not take place',
+    'user_or_platform_not_exist': 'The user and/or platform does not exist',
+    'password_copied_successfully': 'The password was copied successfully!'
 }
 
 ####################################################
-##### GENERAL FUNCTIONS
+##### INITIALIZATION FUNCTION
 
 def initialize():
     # INITIALIZES THE APPLICATION
@@ -119,6 +137,9 @@ def initialize():
         preferenceFile = open('preferences.en','r')
         preference = json.loads(preferenceFile.read())
 
+####################################################
+##### CRYPTOGRAPHIC FUNCTIONS
+
 def encrypt(message, password):
     # ENCRYPTING DATA
     # This function handles the encrypting of data. It accesses the getFernet() function with provided password to get
@@ -164,6 +185,9 @@ def getFernet(password):
     key = getKey(password)
 
     return Fernet(key)
+
+####################################################
+##### GENERAL FUNCTIONS
 
 def checkPassword():
     # VALIDATE A USER ENTERED PASSWORD
@@ -305,7 +329,7 @@ def addPassword(passcode, platform, username, password):
     # This function can be used to add an information set to the database. It will handle
     # the encryption of data, duplicates and writing to the database itself
     # Accepts passcode as String, platform as String, username as String, password as String /
-    #           Return none
+    #           Return success as boolean
     # NOTE: In this function, the password is the password that the user needs to store
     #       not the password used to access the database. That is the passcode here
 
@@ -349,9 +373,12 @@ def addPassword(passcode, platform, username, password):
         # Once updating the loaded database, we dump it back to the physical database to store
         dumpDatabase()
 
+        return True
+
     else:
         print(strVals['existing_username'])
 
+    return False
     # print(database)
     # print('\n\n')
 
@@ -359,7 +386,7 @@ def deletePassword(passcode, platform, username):
     # DELETES AN EXISTING PROFILE
     # This function will delete an existing profile from the database. This will go through the
     # database and delete all instances of the profile within the given platform.
-    # Accepts passcode as String, platform as String, username as String / Return none
+    # Accepts passcode as String, platform as String, username as String / Return success as boolean
 
     # Here we check if the platform is already included in the database. We store all the
     # instances of this platform appearing in the database as a list using the getEncPlatformNames()
@@ -388,7 +415,9 @@ def deletePassword(passcode, platform, username):
                 for usernameInstance in usernameInstances:
                     if decrypt(list(usernameInstance.keys())[0], passcode + platform) == username:
                         database[platformItem].remove(usernameInstance)
-                        dumpDatabase();
+                        dumpDatabase()
+
+                        return True
 
         # Once updating the loaded database, we dump it back to the physical database to store
         dumpDatabase()
@@ -396,6 +425,65 @@ def deletePassword(passcode, platform, username):
     else:
         # Platform not exist
         print(strVals['non_existent_platform'])
+    return False
+
+def editPassword(passcode, platform, username, password):
+    # EDIT AN EXISTING PROFILE
+    # This function will edit an existing profile from the database. This will go through the
+    # database and edit all instances of the profile within the given platform.
+    # Accepts passcode as String, platform as String, username as String, password as String / Return
+    #           success as boolean
+
+    # Here we check if the platform is already included in the database. We store all the
+    # instances of this platform appearing in the database as a list using the getEncPlatformNames()
+    # function.
+    # NOTE: In theory, there should be only one instance but we still check for multiple just in case
+    platformInstances = getEncPlatformNames(passcode, platform)
+
+    if len(getUserData(passcode, platform, username)) != 0:
+        # We first check if a user profile exist under the same username within this platform. This is
+        # done by using the count of lists returned by the getUserData() function. If not, we throw an
+        # error. Otherwise we check if the platform exist. This is done by using the count of
+        # platformInstances list. If so we use the encrypted platform name to get all profiles under
+        # it. Then for each list item, we iterate and check if the decrypted first key item (Because
+        # the profile dictionaries have only a single key value pair) match with the username. If so
+        # we edit that instance in the database itself to include the new password along with the current
+        # time
+        if len(platformInstances) == 0:
+            # Profile not exist
+            print(strVals['non_existent_username'])
+
+        else:
+            # Found the profile in the right platform under right username!
+            # print(platformInstances[0])
+            for platformItem in platformInstances:
+                usernameInstances = database[platformItem]
+
+                for i in range(len(usernameInstances)):
+                    usernameInstance = list(usernameInstances[i].keys())[0]
+                    
+                    if decrypt(usernameInstance, passcode + platform) == username:
+                        if decrypt(database[platformItem][i][usernameInstance][0], passcode + platform + username) != password:
+                            time = datetime.now()
+                            encPassword = encrypt(password, passcode + platform + username)
+                            enctime = encrypt(time.strftime("%Y-%m-%d %H:%M:%S"), passcode + platform + username)
+
+                            database[platformItem][i][usernameInstance] = (encPassword, enctime)
+                            dumpDatabase()
+
+                            return True
+
+                        else:
+                            print(strVals['same_password_to_edit'])
+
+        # Once updating the loaded database, we dump it back to the physical database to store
+        dumpDatabase()
+
+    else:
+        # Platform not exist
+        print(strVals['non_existent_platform'])
+    
+    return False
 
 def dumpDatabase():
     # DUMP DATA TO FILE
@@ -495,22 +583,24 @@ def entryPoint():
         # This section parses the commands
         if(response == 'exit'):
             # Exit command. When given the application exits
-            if database != '':
-                # We also make sure to destroy the database
-                database.close()
+            # >>> exit
+            dumpDatabase()
             quit()
 
         elif(response == 'about'):
             # About command. Opens the about section of the application
+            # >>> about
             showAbout()
 
         elif(response == 'version'):
             # Version command. Shows the version details of the application
+            # >>> version
             showVersion()
 
         elif(response == 'encrypt'):
             # Encrypt command. Simply encrypts a provided string. Only
             # used for debug purposes
+            # >>> encrypt
             password = checkPassword()
 
             if password[0]:
@@ -520,6 +610,7 @@ def entryPoint():
         elif(response == 'decrypt'):
             # Decrypt command. Simply decrypts a provided string. Only
             # used for debug purposes
+            # >>> decrypt
             password = checkPassword()
 
             if password[0]:
@@ -528,11 +619,40 @@ def entryPoint():
 
         elif(response == 'validate'):
             # Validates the given password. Only used for debug purposes
+            # >>> validate
             print(checkPassword())
 
         elif(response == 'add'):
             # Add command. Adds a new password to the database
+            # >>> add           [Add password with default autogenerated password]
+            # >>> add <size> <-u, -n, -c one or more>
+            #                   [Add password with custom autogenerated password]
+            # >>> add -m        [Add manual password]
             newProfile(args)
+
+        elif(response == 'edit'):
+            # Edit command. Edits an existing password in the database
+            # >>> edit <platform> <username>
+            #                   [Edit password with default autogenerated password]
+            # >>> edit <platform> <username> <size> <-u, -n, -c one or more>
+            #                   [Edit password with custom autogenerated password]
+            # >>> edit <platform> <username> -m        [Edit manual password]
+            editProfile(args)
+
+        elif(response == 'delete'):
+            # Delete command. Deletes an existing password in the database
+            # >>> delete <platform> <username>
+            deleteProfile(args)
+
+        elif(response == 'show'):
+            # Show command. Shows an existing password in the database
+            # >>> show <platform> <username>
+            showPassword(args)
+
+        elif(response == 'copy'):
+            # Copy command. Copies an existing password in the database
+            # >>> copy <platform> <username>
+            copyPassword(args)
 
         else:
             # If unknown command is issued, show error message
@@ -620,7 +740,8 @@ def newProfile(args):
             # password
             try:
                 # First we show a warning asking whether the user is ok with the new password
-                warning = input(strVals['new_password_warning'].replace('<p>', platform).replace('<u>', username))
+                print(strVals['show_username_platform'].replace('<p>', platform).replace('<u>', username))
+                warning = input(strVals['proceed_warning_question_with_show'])
 
                 # We loop to make sure incorrect inputs are not accepted. Only 'Y' (Yes), 'N' (No)
                 # and 'S' (Show password) is acceptable. Y and N can only exit from the loop
@@ -630,18 +751,19 @@ def newProfile(args):
                     if(warning == 'S'):
                         print(strVals['show_password'].replace('<p>', password[1]))
                     
-                    warning = input(strVals['new_password_warning'].replace('<p>', platform).replace('<u>', username))
+                    print(strVals['show_username_platform'].replace('<p>', platform).replace('<u>', username))
+                    warning = input(strVals['proceed_warning_question_with_show'])
 
                 if (warning == 'Y'):
                     # Finally we check if 'Y' is given which means that the user accepts
                     # NOTE: Need improvements here. Decide if to show or not show password.
                     #       Also implement function to automatically copy password to clipboard!
-                    addPassword(passcode[1], platform, username, password[1])
-                    print(strVals['password_added_successfully'])
+                    if addPassword(passcode[1], platform, username, password[1]):
+                        print(strVals['password_added_successfully'])
 
                 else:
                     # In case the reply was otherwise, we show an aborted message and exit
-                    print(strVals['password_abort'])
+                    print(strVals['user_abort'])
 
                 return True
 
@@ -654,36 +776,221 @@ def newProfile(args):
     return False
 
 def deleteProfile(args):
+    # DELETE PROFILE FUNCTION
+    # Handles the user side tasks to delete an existing password from the system. This will handle messages,
+    # error checks, and inputs.
+    # Accepts args as list of Strings / Return success as Boolean
+    # NOTE: This does not handle the technical work. Refer the deletePassword() for that
+    
     if len(args) == 2:
         platform = args[0]
         username = args[1]
 
         try:
             # First we show a warning asking whether the user is ok with deleting the password
-            warning = input(strVals['delete_password_warning'].replace('<p>', platform).replace('<u>', username))
+            print(strVals['delete_password_warning'])
+            print(strVals['show_username_platform'].replace('<p>', platform).replace('<u>', username))
+            warning = input(strVals['proceed_warning_question'])
 
             # We loop to make sure incorrect inputs are not accepted. Only 'Y' (Yes), 'N' (No)
             # Y and N can only exit from the loop
             while (not((warning == 'Y') or (warning == 'N'))):
-                warning = input(strVals['delete_password_warning'].replace('<p>', platform).replace('<u>', username))
+                print(strVals['delete_password_warning'])
+                print(strVals['show_username_platform'].replace('<p>', platform).replace('<u>', username))
+                warning = input(strVals['proceed_warning_question'])
 
             if (warning == 'Y'):
                 # Finally we check if 'Y' is given which means that the user accepts
                 passcode = checkPassword() # Checking password
 
                 if passcode[0]:
-                    deletePassword(passcode[1], platform, username)
-                    print(strVals['password_deleted_successfully'])
+                    if deletePassword(passcode[1], platform, username):
+                        print(strVals['password_deleted_successfully'])
+                        dumpDatabase()
 
             else:
                 # In case the reply was otherwise, we show an aborted message and exit
-                print(strVals['password_abort'])
+                print(strVals['user_abort'])
 
             return True
 
         except Exception as err:
             # This is for error handling
             print(strVals['fatal_error'].replace('<l>', 'deletePassword').replace('<e>', err))
+
+    else:
+        print(strVals['invalid_delete_password_args'])
+
+    return False
+
+def editProfile(args):
+    # EDIT PASSWORD FUNCTION
+    # Handles the user side tasks to edit an existing password to the system. This will handle messages,
+    # error checks, and inputs.
+    # Accepts args as list of Strings / Return success as Boolean
+    # NOTE: This does not handle the technical work. Refer the editPassword() for that
+
+    # We first ask user to validate by entering the password
+    passcode = checkPassword()
+    manual = '-m' in args
+
+    if (len(args) < 2):
+        print(strVals['invalid_edit_password_args'])
+        return False
+
+    # Here we extract platform and username of the desired account from arguements
+    platform = args[0]
+    username = args[1]
+
+    if passcode[0]:
+        # If the user entered the incorrect password, we throw an error and return False
+        password = (False, '') # This is NOT the users password. This is the variable to
+        # store the password the user want to store
+
+        if not(manual):
+            # Here we check of the user requested manual password. If not we first check if
+            # user has entered any parameters. If so we first extract the length of the password
+            # from first arguement as this is what the first arguement must be if arguements are
+            # present. The rest are also checked. If no arguements are passed, we generate a
+            # password with default arguements. We also set First value of password tuple to
+            # know later that password is auto generated
+            if (len(args) > 2):
+                try:
+                    passwordParams = (int(args[2]), '-u' in args, '-n' in args, '-c' in args)
+                    # (length, uppercase, numbers, specialChar)
+                    password = (True, randomPassword(passwordParams[0], passwordParams[1], passwordParams[2], passwordParams[3]))
+
+                except Exception:
+                    print(strVals['invalid_edit_password_args'])
+                    return False
+            else:
+                password = (True, randomPassword())
+
+        # Here we check if either of them are empty or both combined make a duplicate
+        # If so, we discard everything and return back
+        if ((platform == '') or (username == '')):
+            print(strVals['invalid_platform_inputs'])
+            return False
+
+        elif len(getUserData(passcode[1], platform, username)) == 0:
+            print(strVals['no_user_platform'])
+            return False
+
+        if manual:
+            # We check again for manual and if so, we send to the manualPassword() function
+            # that handle the manual passwords. This is done later so that for an auto
+            # generation, few args has to be checked first and if an error exist in the
+            # arguements passed, we must show an error and exit BEFORE we ask for user input
+            # On the other hand, if manual, the password has to be handled AFTER user enters
+            # the platform and username data and these are validated
+            password = manualPassword()
+
+        if password[0]:
+            # Here we check if the new password is ready for assigning. This is put in place
+            # so that we know if auto generation failed or manual password attempt failed.
+            # This makes sure no data is entered to the database in case of an erroneous
+            # password
+            try:
+                # First we show a warning asking whether the user is ok with the new password
+                print(strVals['edit_password_warning'])
+                print(strVals['show_username_platform'].replace('<p>', platform).replace('<u>', username))
+                warning = input(strVals['proceed_warning_question_with_show'])
+
+                # We loop to make sure incorrect inputs are not accepted. Only 'Y' (Yes), 'N' (No)
+                # and 'S' (Show password) is acceptable. Y and N can only exit from the loop
+                while (not((warning == 'Y') or (warning == 'N'))):
+                    # Entering 'S' will show the user the new password that the application is
+                    # ready to store. This is not shown by default for security purposes.
+                    if(warning == 'S'):
+                        print(strVals['show_password'].replace('<p>', password[1]))
+                    
+                        print(strVals['edit_password_warning'])
+                        print(strVals['show_username_platform'].replace('<p>', platform).replace('<u>', username))
+                        warning = input(strVals['proceed_warning_question_with_show'])
+
+                if (warning == 'Y'):
+                    # Finally we check if 'Y' is given which means that the user accepts
+                    # NOTE: Need improvements here. Decide if to show or not show password.
+                    #       Also implement function to automatically copy password to clipboard!
+                    if editPassword(passcode[1], platform, username, password[1]):
+                        print(strVals['password_changed_successfully'])
+
+                else:
+                    # In case the reply was otherwise, we show an aborted message and exit
+                    print(strVals['user_abort'])
+
+                return True
+
+            except Exception as err:
+                # This is for error handling
+                print(strVals['fatal_error'].replace('<l>', 'editPassword').replace('<e>', err))
+
+                return False
+
+    return False
+
+def showPassword(args):
+    # COPY PASSWORD FUNCTION
+    # Allows user to see the password quickly from username and password
+    # Accepts args as list of Strings / Return success as Boolean
+
+    # We first ask user to validate by entering the password
+    passcode = checkPassword()
+
+    if (len(args) < 2):
+        print(strVals['invalid_view_password_args'])
+        return False
+
+    # Here we extract platform and username of the desired account from arguements
+    platform = args[0]
+    username = args[1]
+
+    if passcode[0]:
+        # If the user entered the incorrect password, we throw an error and return False
+        userInformation = getUserInformation(passcode[1], platform, username)
+
+        if len(userInformation) > 0:
+            # We get the password info from getUserInformation() function for the
+            # provided username and platform combination and we copy the first
+            # returned value if we have more that zero data and show an error if not
+            print(strVals['show_username_platform'].replace('<p>', platform).replace('<u>', username))
+            print(strVals['show_password_with_info'].replace('<p>', userInformation[0][0]).replace('<d>', userInformation[0][1]))
+        
+        else:
+            print(strVals['user_or_platform_not_exist'])
+
+    return False
+
+def copyPassword(args):
+    # COPY PASSWORD FUNCTION
+    # Allows user to copy the password quickly from username and password
+    # Accepts args as list of Strings / Return success as Boolean
+
+    # We first ask user to validate by entering the password
+    passcode = checkPassword()
+
+    if (len(args) < 2):
+        print(strVals['invalid_edit_password_args'])
+        return False
+
+    # Here we extract platform and username of the desired account from arguements
+    platform = args[0]
+    username = args[1]
+
+    if passcode[0]:
+        # If the user entered the incorrect password, we throw an error and return False
+        userInformation = getUserInformation(passcode[1], platform, username)
+
+        if len(userInformation) > 0:
+            # We get the password info from getUserInformation() function for the
+            # provided username and platform combination and we copy the first
+            # returned value if we have more that zero data and show an error if not
+            print(strVals['show_username_platform'].replace('<p>', platform).replace('<u>', username))
+            pc.copy(userInformation[0][0])
+            print(strVals['password_copied_successfully'])
+        
+        else:
+            print(strVals['user_or_platform_not_exist'])
 
     return False
 
@@ -701,7 +1008,13 @@ initialize()
 
 # print(getPlatform('password', 'facebook'))
 # print('\n\n')
-newProfile([])
+#newProfile([])
+addPassword('password', 'insta', 'asanka', 'helloworl')
 print(getUserInformation('password', 'insta', 'asanka'))
-deleteProfile(['insta', 'asanka'])
+#editProfile(input('Edit').split(' '))
+#editPassword('password', 'insta', 'asanka', 'helloworld')
+entryPoint()
+print(getUserInformation('password', 'insta', 'asanka'))
+deletePassword('password', 'insta', 'asanka')
+#deleteProfile(['insta', 'asanka'])
 print(getUserInformation('password', 'insta', 'asanka'))
