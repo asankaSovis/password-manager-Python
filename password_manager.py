@@ -49,7 +49,7 @@ from os.path import exists # Used to check if files exist
 ####################################################
 ##### GLOBAL VARIABLES
 
-version = 'v0' # Version number of the application. Set accordingly
+version = '0' # Version number of the application. Set accordingly
 preference = {'salt': b64encode(os.urandom(16)).decode('utf-8')} # A salt is generated in case
 database = {} # This is the database used in the application
 
@@ -57,17 +57,18 @@ strVals = {
     # This database hold all the strings used in messages and inputs throughouts the application
     # These can later be set to load from a text file for ease
     'loading_information': '-------------------------------------------------------------\n'\
-        '                **🔐 PASSWORD MANAGER <v>**\n'\
+        '                **🔐 PASSWORD MANAGER v<v>**\n'\
+        '                   © Asanka Sovis 2022\n'\
         '           Manage all your passwords in one place.\n\n'\
         ' NOTE: By using this application, you agree to accept\n'\
         '       the license agreement.\n'\
         ' WARNING: This application is still in the alpha\n'\
-        '       preview, only use it for testing purposes.\n'
+        '       preview, only use it for testing purposes.\n'\
         '-------------------------------------------------------------\n',
     'initializing_application': 'Initializing application...',
     'no_database_found': 'No database found. Creating database...',
     'initializing_preferences': 'Loading preferences...\n',
-    'ready': 'Ready',
+    'ready': 'Ready. Type "help" for help information.',
     'existing_username': 'Error: The username already exists in the database under this platform',
     'incorrect_password': 'Error: The password you entered is incorrect',
     'unknown_commands': 'Unknown Command',
@@ -77,7 +78,6 @@ strVals = {
     'invalid_delete_password_args': 'Invalid arguements for deleting password',
     'invalid_search_args': 'Invalid arguements for search provided',
     'about_string': 'Password Manager',
-    'version_string': 'Password Manager <v>',
     'password_string': 'Password: ',
     'input_platform': 'Platform: ',
     'input_username': 'Username: ',
@@ -708,6 +708,12 @@ def entryPoint():
             dumpDatabase()
             quit()
 
+        elif(response == 'help'):
+            # Help command. Opens the help section of the application
+            # >>> help
+            # >>> help <command>
+            showHelp(args)
+
         elif(response == 'about'):
             # About command. Opens the about section of the application
             # >>> about
@@ -785,17 +791,17 @@ def entryPoint():
             #                   [Search platform with specific keyword and list results in specified row count]
             showPlatforms(args)
 
-        elif(response == 'usernames'):
+        elif(response == 'username'):
             # Usernames command. Shows/search all usernames in database
-            # >>> usernames
+            # >>> username
             #                   [All the usernames in all platforms]
-            # >>> usernames <keyword>
+            # >>> username <keyword>
             #                   [Search usernames with specific keyword in all platforms]
-            # >>> usernames <keyword> <platform>
+            # >>> username <keyword> <platform>
             #                   [Search platform with specific keyword and platform]
-            # >>> usernames -a <platform>
+            # >>> username -a <platform>
             #                   [All usernames in specified platform]
-            # >>> usernames <keyword/'-a'> <platform> <rows>
+            # >>> username <keyword/'-a'> <platform> <rows>
             #                   [Search platform with specific keyword and platform and list results in specified row count]
             showUsernames(args)
 
@@ -813,14 +819,31 @@ def showVersion():
     # This function shows the version of the application to the user
     # Accept none / Return null
     # NOTE: This section still needs improving!
-    print(strVals['version_string'].replace('<v>', version))
+    print(version)
 
 def showAbout():
     # SHOW ABOUT DATA
     # This function is used to print about information to the user
     # Accepts none / Returns null
     # NOTE: This section still needs improving!
+    print(strVals['loading_information'].replace('<v>', version))
     print(strVals['about_string'])
+
+def showHelp(args):
+    arguement = ''
+    helpFile = open('help.json','r')
+    helpData = json.loads(helpFile.read())
+
+    if len(args) > 0:
+        arguement = args[0]
+    else:
+        print(helpData['general'])
+
+    for item in helpData.keys():
+        if ((item != 'general') and (arguement in item)):
+            print('● ' + item + ' command\n' + helpData[item])
+
+    return False
 
 def newProfile(args):
     # NEW PASSWORD FUNCTION
