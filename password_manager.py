@@ -25,16 +25,23 @@ from datetime import datetime # Use date and time
 # Fernet encryption module
 # NOTE: Cryptography is NOT an included library. It needs to be installed
 #       by pip install cryptography
-# NOTE: Implement a check in place
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+try:
+    from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+except ImportError or ModuleNotFoundError:
+    print('Cryptography module does not exist. This is an important module. Please install it by using the "pip install cryptography" command')
+    exit(1)
 
 # Pyperclip clipboard module
 # NOTE: Pyperclip is NOT an included library. It needs to be installed
 #       by pip install pyperclip
-# NOTE: Implement a check in place
-import pyperclip as pc
+try:
+    import pyperclip as pc
+except ImportError or ModuleNotFoundError:
+    print('Pyperclip module does not exist. Please install it by using the "pip install pyperclip" command.'\
+        'You can still use the application; but will get an error if you try to use the "copy" command.')
+    exit(1)
 
 from base64 import b64encode # Loading only the base64 encoding function
 from os.path import exists # Used to check if files exist
@@ -49,9 +56,11 @@ database = {} # This is the database used in the application
 strVals = {
     # This database hold all the strings used in messages and inputs throughouts the application
     # These can later be set to load from a text file for ease
+    'loading_information': '------------------------------------------\n**Password Manager**\n------------------------------------------\n',
     'initializing_application': 'Initializing application...',
     'no_database_found': 'No database found. Creating database...',
-    'initializing_preferences': 'Loading preferences...',
+    'initializing_preferences': 'Loading preferences...\n',
+    'ready': 'Ready',
     'existing_username': 'Error: The username already exists in the database under this platform',
     'incorrect_password': 'Error: The password you entered is incorrect',
     'unknown_commands': 'Unknown Command',
@@ -73,15 +82,16 @@ strVals = {
     'fatal_error': 'Fatal Error: <l> | <e>',
     'password_added_successfully': 'Password added successfully',
     'password_changed_successfully': 'Password changed successfully',
-    'password_deleted_successfully': 'Password deleted successfully',
-    'show_username_platform': 'Platform: <p> | Username: <u>',
+    'password_deleted_successfully': 'Profile deleted successfully',
+    'show_username_platform': '\nPlatform: <p> | Username: <u>\n',
     'edit_password_warning': 'WARNING: The password will be PERMANENTLY changed in the following Profile',
     'delete_password_warning': 'WARNING: The following Profile will be deleted PERMANENTLY',
     'proceed_warning_question': 'Do you wish to proceed?Y/N ',
     'proceed_warning_question_with_show': 'Do you wish to proceed?Y/N,S to show password ',
-    'show_password': 'Password: <p>',
+    'show_password': '\nPassword: <p>\n',
     'show_password_with_info': 'Password: <p>           | Added Date: <d>',
     'user_abort': 'User rejected the operation',
+    'copy_error': 'An error occured when attempting to copy the data. Maybe the Pyperclip module is not installed',
     'duplicate_user_platform': 'The same user exist in the platform',
     'no_user_platform': 'This user is not under this platform',
     'non_existent_platform': 'The platform does not exist',
@@ -89,12 +99,12 @@ strVals = {
     'same_password_to_edit': 'The password you entered is the same as the existing password. Modification did not take place',
     'user_or_platform_not_exist': 'The user and/or platform does not exist',
     'password_copied_successfully': 'The password was copied successfully!',
-    'show_all_platforms': 'Showing all platforms in the database----------------------',
-    'show_keyword_platforms': 'Showing all platforms that match "<k>"---------------------',
-    'show_all_usernames': 'Showing all usernames in the database----------------------',
-    'show_all_usernames_in_keyword_platforms': 'Showing all usernames in "<p>"--------------',
-    'show_keyword_usernames': 'Showing all usernames that match "<k>"----------------',
-    'show_keyword_usernames_in_keyword_platforms': 'Showing usernames that match "<k>" in "<p>"--------------',
+    'show_all_platforms': 'Showing all platforms in the database----------------------\n',
+    'show_keyword_platforms': 'Showing all platforms that match "<k>"---------------------\n',
+    'show_all_usernames': 'Showing all usernames in the database----------------------\n',
+    'show_all_usernames_in_keyword_platforms': 'Showing all usernames in "<p>"--------------\n',
+    'show_keyword_usernames': 'Showing all usernames that match "<k>"----------------\n',
+    'show_keyword_usernames_in_keyword_platforms': 'Showing usernames that match "<k>" in "<p>"--------------\n',
 }
 
 ####################################################
@@ -669,6 +679,8 @@ def entryPoint():
     # It will run until an error occur or user enter the exit command
     # Accepts none / Return null
 
+    print(strVals['ready'])
+
     while(True):
         # Application loop
         response = input('>>> ').split(" ") # Parsing the response
@@ -784,6 +796,8 @@ def entryPoint():
             # If unknown command is issued, show error message
             print(strVals['unknown_commands'])
 
+        print()
+
 ####################################################
 ###### INTERFACE FUNCTIONS
 
@@ -837,8 +851,8 @@ def newProfile(args):
                 password = (True, randomPassword())
 
         # Here we get platform and username of the desired account
-        platform = input(strVals['input_platform'])
-        username = input(strVals['input_username'])
+        platform = input(strVals['input_platform']).replace(' ', '_').replace('-', '_')
+        username = input(strVals['input_username']).replace(' ', '_').replace('-', '_')
 
         # Here we check if either of them are empty or both combined make a duplicate
         # If so, we discard everything and return back
@@ -965,8 +979,8 @@ def editProfile(args):
         return False
 
     # Here we extract platform and username of the desired account from arguements
-    platform = args[0]
-    username = args[1]
+    platform = args[0].replace(' ', '_').replace('-', '_')
+    username = args[1].replace(' ', '_').replace('-', '_')
 
     if passcode[0]:
         # If the user entered the incorrect password, we throw an error and return False
@@ -1112,7 +1126,10 @@ def copyPassword(args):
             # provided username and platform combination and we copy the first
             # returned value if we have more that zero data and show an error if not
             print(strVals['show_username_platform'].replace('<p>', platform).replace('<u>', username))
-            pc.copy(userInformation[0][0])
+            try:
+                pc.copy(userInformation[0][0])
+            except:
+                print(strVals['copy_error'])
             print(strVals['password_copied_successfully'])
         
         else:
@@ -1257,6 +1274,7 @@ def showUsernames(args):
 ##### Application
 
 # First we initialize the application
+print(strVals['loading_information'])
 initialize()
 # Then we enter into the entry point to continue with the application
 # entryPoint()
