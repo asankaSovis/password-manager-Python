@@ -1,2 +1,2 @@
 # password-manager
-This is a basic password manager for your computer.
+Password manager is a password manager designed to make managing passwords easy and secure. 
