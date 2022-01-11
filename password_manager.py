@@ -14,7 +14,6 @@
 ##     - License: MIT Open License
 ###############################################################################
 
-import math # For math related functions
 import json # Handle JSON format
 import base64 # Handle base64 conversions
 import os # Access OS functions
@@ -50,6 +49,9 @@ database = {} # This is the database used in the application
 strVals = {
     # This database hold all the strings used in messages and inputs throughouts the application
     # These can later be set to load from a text file for ease
+    'initializing_application': 'Initializing application...',
+    'no_database_found': 'No database found. Creating database...',
+    'initializing_preferences': 'Loading preferences...',
     'existing_username': 'Error: The username already exists in the database under this platform',
     'incorrect_password': 'Error: The password you entered is incorrect',
     'unknown_commands': 'Unknown Command',
@@ -104,46 +106,59 @@ def initialize():
     # Accepts none / Returns null
     global preference, database
 
+    print(strVals['initializing_application'])
+
     if not(exists('database.en')):
         # If the database doesn't exist, ask user if they like to load an existing database
-        # NOTE: Implement this functionality!
-        print('')
+        # NOTE: For now it's not doing anything. Can activate if needed
+        print(strVals['no_database_found'])
 
     databaseFile = open('database.en','r')
     # Opens the database 01. to create an empty database if one doesn't exist, 02. to check if it's empty
 
     if databaseFile.read() != '':
         # If the database is not empty we read the database and dump the contents to our dictionary
-        # NOTE: Implement error handling!
         databaseFile = open('database.en','r')
-        database = json.loads(databaseFile.read())
+
+        try:
+            database = json.loads(databaseFile.read())
+            
+        except Exception as err:
+            print(strVals['fatal_error'].replace('<l>', 'Database loading').replace('<e>', err))
+            exit()
 
     # if not(exists('preferences.en')):
         # If the preferences file doesn't exist, we can use this section to do something
         # NOTE: For now it's not doing anything. Can activate if needed
     #     print('')
     
+    print(strVals['initializing_preferences'])
+
     preferenceFile = open('preferences.en','r')
     # Opens the preference file 01. to create an empty file if one doesn't exist, 02. to check if it's empty
 
-    if preferenceFile.read() == '':
-        # If the preference file is empty we:
-        #       01. Generate a new key from a new password and store it on the preference dictionary
-        #       02. Open the preference file to create one if needed
-        #       03. Dump preference data to this file
-        # NOTE: A default random salt is generated at the start of the application
-        # NOTE: If the preference file is empty, we must ask the user to create a new password
-        #       and this password MUST be the one used to generate the key. Implement this
-        #       functionality!
-        # NOTE: Implement error handling!
-        preference['key'] = getKey('password').decode()
-        preferenceFile = open('preferences.en','w+')
-        preferenceFile.write(json.dumps(preference))
-    else:
-        # If the preference file is not empty we dump all content to the preference dictionary
-        # NOTE: Implement error handling!
-        preferenceFile = open('preferences.en','r')
-        preference = json.loads(preferenceFile.read())
+    try:
+        if preferenceFile.read() == '':
+            # If the preference file is empty we:
+            #       01. Generate a new key from a new password and store it on the preference dictionary
+            #       02. Open the preference file to create one if needed
+            #       03. Dump preference data to this file
+            # NOTE: A default random salt is generated at the start of the application
+            # NOTE: If the preference file is empty, we must ask the user to create a new password
+            #       and this password MUST be the one used to generate the key. Implement this
+            #       functionality!
+            preference['key'] = getKey('password').decode()
+            preferenceFile = open('preferences.en','w+')
+            preferenceFile.write(json.dumps(preference))
+
+        else:
+            # If the preference file is not empty we dump all content to the preference dictionary
+            preferenceFile = open('preferences.en','r')
+            preference = json.loads(preferenceFile.read())
+    
+    except Exception as err:
+        print(strVals['fatal_error'].replace('<l>', 'Preferences loading').replace('<e>', err))
+        exit()
 
 ####################################################
 ##### CRYPTOGRAPHIC FUNCTIONS
@@ -153,8 +168,13 @@ def encrypt(message, password):
     # This function handles the encrypting of data. It accesses the getFernet() function with provided password to get
     # the encryption module and uses it to encrypt any arbitrary message sent for encrypting
     # Accepts the message as String, password as String / Returns the encrypted data as base64 encoded String
-    # NOTE: Implement error handling!
-    return getFernet(password).encrypt(message.encode()).decode()
+
+    try:
+        return getFernet(password).encrypt(message.encode()).decode()
+            
+    except Exception as err:
+        print(strVals['fatal_error'].replace('<l>', 'encrypt()').replace('<e>', err))
+        exit()
 
 def decrypt(message, password):
     # DECRYPTING DATA
@@ -170,7 +190,6 @@ def getKey(password):
     # The keys are according to Fernet specs https://github.com/fernet/spec/blob/master/Spec.md
     # Key Format : Signing-key (128 bit) ‖ Encryption-key (128 bit)
     # Accepts password as String / Return Fernet key as base64 encoded String
-    # NOTE: Implement error handling and progress reports!
 
     global preference
 
@@ -181,18 +200,27 @@ def getKey(password):
         iterations = 390000,
     )
 
-    return base64.urlsafe_b64encode(kdf.derive(password.encode()))
+    try:
+        return base64.urlsafe_b64encode(kdf.derive(password.encode()))
+            
+    except Exception as err:
+        print(strVals['fatal_error'].replace('<l>', 'getKey()').replace('<e>', err))
+        exit()
 
 def getFernet(password):
     # GET THE FERNET
     # This function generates a Fernet module from a given password. It access the getKey() function to
     # get a Fernet key which is used to generate and return a Fernet
     # Accepts password as String / Returns the Fernet as module
-    # NOTE: Implement error handling!
 
     key = getKey(password)
 
-    return Fernet(key)
+    try:
+        return Fernet(key)
+            
+    except Exception as err:
+        print(strVals['fatal_error'].replace('<l>', 'getFernet()').replace('<e>', err))
+        exit()
 
 ####################################################
 ##### GENERAL FUNCTIONS
