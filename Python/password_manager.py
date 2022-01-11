@@ -1,6 +1,6 @@
 ###############################################################################
 ##                            %% 🔐 PASSWORD MANAGER 🔐 %%
-##                                  © Asanka Sovis
+##                                  © 2022 Asanka Sovis
 ##
 ##                   This is a basic password manager made in python.
 ##                                       NOTE:
@@ -10,7 +10,9 @@
 ##
 ##     - Author: Asanka Sovis
 ##     - Project start: 08/01/2022 6:00am
-##     - Version: 0
+##     - Public release: 11/01/2022
+##     - Version: 1.0.0 Alpha
+##     - Current release: 12/01/2022
 ##     - License: MIT Open License
 ###############################################################################
 
@@ -49,23 +51,39 @@ from os.path import exists # Used to check if files exist
 ####################################################
 ##### GLOBAL VARIABLES
 
-version = '0' # Version number of the application. Set accordingly
+# Application information
+managerInfo = {
+    'version': '1.0.0 Alpha',
+    'copyright': '(C) 2022 Asanka Sovis',
+    'start_date': '08/01/2022',
+    'public_release': '12/01/2022',
+    'version_release': '12/01/2022'
+}
+
+myLocation = os.path.dirname(os.path.abspath(__file__)) + '\\'
 preference = {'salt': b64encode(os.urandom(16)).decode('utf-8')} # A salt is generated in case
 database = {} # This is the database used in the application
 
 strVals = {
     # This database hold all the strings used in messages and inputs throughouts the application
     # These can later be set to load from a text file for ease
-    'loading_information': '-------------------------------------------------------------\n'\
+    'loading_information': '-----------------------------------------------------------------\n'\
         '                **🔐 PASSWORD MANAGER v<v>**\n'\
-        '                   © Asanka Sovis 2022\n'\
-        '           Manage all your passwords in one place.\n\n'\
-        ' NOTE: By using this application, you agree to accept\n'\
-        '       the license agreement.\n'\
-        ' WARNING: This application is still in the alpha\n'\
-        '       preview, only use it for testing purposes.\n'\
-        '-------------------------------------------------------------\n',
+        '                     © 2022 Asanka Sovis\n'\
+        '             Manage all your passwords in one place.\n\n'\
+        ' NOTE: By using this application, you agree to accept the license\n'\
+        '       agreement.\n'\
+        ' WARNING: This application is still in the alpha preview, only use\n'\
+        '       it for testing purposes.\n'\
+        '-----------------------------------------------------------------\n',
+    'exit': 'Exiting...',
     'initializing_application': 'Initializing application...',
+    'create_new_password': 'Welcome to Password Manager!\nIn order for the application to protect passwords, setup a new password to encrypt your passwords.',
+    'create_new_password_success': '\nCongradulations! The application is ready.'\
+        '\nThe password is not stored anywhere. All three of the elements: Password,\n'\
+        'key and salt are needed to decrypt your information. Therefore make sure to\nremember'\
+        ' your password carefully.\nAdditionally, the preferences.en file contains the salt and\n'\
+        'hash information as well. Therefore store that file safely as well.\n',
     'no_database_found': 'No database found. Creating database...',
     'initializing_preferences': 'Loading preferences...\n',
     'ready': 'Ready. Type "help" for help information.',
@@ -77,7 +95,8 @@ strVals = {
     'invalid_view_password_args': 'Invalid arguements for accessing password',
     'invalid_delete_password_args': 'Invalid arguements for deleting password',
     'invalid_search_args': 'Invalid arguements for search provided',
-    'about_string': 'Password Manager',
+    'about_string': 'Password Manager is a simple password manager built\nin Python that'\
+        ' can manage passwords.\n   <v> (<d>)',
     'password_string': 'Password: ',
     'input_platform': 'Platform: ',
     'input_username': 'Username: ',
@@ -129,13 +148,16 @@ def initialize():
         # If the database doesn't exist, ask user if they like to load an existing database
         # NOTE: For now it's not doing anything. Can activate if needed
         print(strVals['no_database_found'])
+        with open(myLocation + 'database.en', 'w') as fp:
+            fp.write('')
+            pass
 
-    databaseFile = open('database.en','r')
+    databaseFile = open(myLocation + 'database.en','r')
     # Opens the database 01. to create an empty database if one doesn't exist, 02. to check if it's empty
 
     if databaseFile.read() != '':
         # If the database is not empty we read the database and dump the contents to our dictionary
-        databaseFile = open('database.en','r')
+        databaseFile = open(myLocation + 'database.en','r')
 
         try:
             database = json.loads(databaseFile.read())
@@ -144,15 +166,16 @@ def initialize():
             print(strVals['fatal_error'].replace('<l>', 'Database loading').replace('<e>', err))
             exit()
 
-    # if not(exists('preferences.en')):
-        # If the preferences file doesn't exist, we can use this section to do something
-        # NOTE: For now it's not doing anything. Can activate if needed
-    #     print('')
-    
     print(strVals['initializing_preferences'])
 
-    preferenceFile = open('preferences.en','r')
-    # Opens the preference file 01. to create an empty file if one doesn't exist, 02. to check if it's empty
+    if not(exists('preferences.en')):
+        # If the preferences file doesn't exist,it is created
+        with open(myLocation + 'preferences.en', 'w') as fp:
+            fp.write('')
+            pass
+
+    preferenceFile = open(myLocation + 'preferences.en','r')
+    # Opens the preference file to check if it's empty
 
     try:
         if preferenceFile.read() == '':
@@ -162,15 +185,23 @@ def initialize():
             #       03. Dump preference data to this file
             # NOTE: A default random salt is generated at the start of the application
             # NOTE: If the preference file is empty, we must ask the user to create a new password
-            #       and this password MUST be the one used to generate the key. Implement this
-            #       functionality!
-            preference['key'] = getKey('password').decode()
-            preferenceFile = open('preferences.en','w+')
-            preferenceFile.write(json.dumps(preference))
+            #       and this password MUST be the one used to generate the key.
+            print(strVals['create_new_password'])
+            password = manualPassword()
+
+            if password[0]:
+                preference['key'] = getKey(password[1]).decode()
+                preferenceFile = open(myLocation + 'preferences.en','w+')
+                preferenceFile.write(json.dumps(preference))
+
+                print(strVals['create_new_password_success'])
+
+            else:
+                exit()
 
         else:
             # If the preference file is not empty we dump all content to the preference dictionary
-            preferenceFile = open('preferences.en','r')
+            preferenceFile = open(myLocation + 'preferences.en','r')
             preference = json.loads(preferenceFile.read())
     
     except Exception as err:
@@ -564,7 +595,7 @@ def dumpDatabase():
     # DUMP DATA TO FILE
     # All updates to the database is dumped back to the physical file
     # Accepts none / Return null
-    databaseFile = open('database.en','w+')
+    databaseFile = open(myLocation + 'database.en','w+')
     databaseFile.write(json.dumps(database))
 
 def getPlatformNames(password, keyword = ''):
@@ -705,6 +736,7 @@ def entryPoint():
         if(response == 'exit'):
             # Exit command. When given the application exits
             # >>> exit
+            print(strVals['exit'])
             dumpDatabase()
             quit()
 
@@ -723,6 +755,11 @@ def entryPoint():
             # Version command. Shows the version details of the application
             # >>> version
             showVersion()
+
+        elif(response == 'copyright'):
+            # Copyright command. Shows the copyright details of the application
+            # >>> copyright
+            showCopyright()
 
         elif(response == 'encrypt'):
             # Encrypt command. Simply encrypts a provided string. Only
@@ -819,26 +856,38 @@ def showVersion():
     # This function shows the version of the application to the user
     # Accept none / Return null
     # NOTE: This section still needs improving!
-    print(version)
+    print(managerInfo['version'])
 
 def showAbout():
     # SHOW ABOUT DATA
     # This function is used to print about information to the user
     # Accepts none / Returns null
-    # NOTE: This section still needs improving!
-    print(strVals['loading_information'].replace('<v>', version))
-    print(strVals['about_string'])
+    print(strVals['loading_information'].replace('<v>', managerInfo['version']))
+    print(strVals['about_string'].replace('<v>', managerInfo['version']).replace('<d>', managerInfo['version_release']))
+
+def showCopyright():
+    # SHOW COPYRIGHT DATA
+    # This function is used to print copyright information to the user
+    # Accepts none / Returns null
+    print(managerInfo['copyright'])
 
 def showHelp(args):
+    # SHOW HELP DATA
+    # This function is used to show the help information to the user
+    # Accepts none / Returns null
+
+    # We first load the help information and extract the data
     arguement = ''
-    helpFile = open('help.json','r')
+    helpFile = open(myLocation + 'help.json','r')
     helpData = json.loads(helpFile.read())
 
+    # Then we check the arguements
     if len(args) > 0:
         arguement = args[0]
     else:
         print(helpData['general'])
 
+    # Finally, help data is printed accordingly
     for item in helpData.keys():
         if ((item != 'general') and (arguement in item)):
             print('● ' + item + ' command\n' + helpData[item])
@@ -1304,26 +1353,13 @@ def showUsernames(args):
 ##### Application
 
 # First we initialize the application
-print(strVals['loading_information'].replace('<v>', version))
+print(strVals['loading_information'].replace('<v>', managerInfo['version']))
 initialize()
 # Then we enter into the entry point to continue with the application
-# entryPoint()
+entryPoint()
 
 ####################################################
 ##### DEBUG CODE
 ##### NOTE: COMMENT AFTER TESTING
 
 # print(getPlatform('password', 'facebook'))
-# print('\n\n')
-#newProfile([])
-# addPassword('password', 'insta', 'asanka', 'helloworl')
-# print(getUserInformation('password', 'insta', 'asanka'))
-#editProfile(input('Edit').split(' '))
-#editPassword('password', 'insta', 'asanka', 'helloworld')
-entryPoint()
-# print(getUserInformation('password', 'insta', 'asanka'))
-# deletePassword('password', 'insta', 'asanka')
-#deleteProfile(['insta', 'asanka'])
-# print(getUserInformation('password', 'insta', 'asanka'))
-#showPlatforms(['a'])
-#showUsernames(['p', 'a', '1'])
