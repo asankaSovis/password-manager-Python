@@ -14,6 +14,7 @@
 ##     - License: MIT Open License
 ###############################################################################
 
+import math # For math related functions
 import json # Handle JSON format
 import base64 # Handle base64 conversions
 import os # Access OS functions
@@ -56,6 +57,7 @@ strVals = {
     'invalid_edit_password_args': 'Invalid arguements for edit password',
     'invalid_view_password_args': 'Invalid arguements for accessing password',
     'invalid_delete_password_args': 'Invalid arguements for deleting password',
+    'invalid_search_args': 'Invalid arguements for search provided',
     'about_string': 'Password Manager',
     'version_string': 'Password Manager <v>',
     'password_string': 'Password: ',
@@ -84,7 +86,13 @@ strVals = {
     'non_existent_username': 'THe username does not exist under the platform',
     'same_password_to_edit': 'The password you entered is the same as the existing password. Modification did not take place',
     'user_or_platform_not_exist': 'The user and/or platform does not exist',
-    'password_copied_successfully': 'The password was copied successfully!'
+    'password_copied_successfully': 'The password was copied successfully!',
+    'show_all_platforms': 'Showing all platforms in the database----------------------',
+    'show_keyword_platforms': 'Showing all platforms that match "<k>"---------------------',
+    'show_all_usernames': 'Showing all usernames in the database----------------------',
+    'show_all_usernames_in_keyword_platforms': 'Showing all usernames in "<p>"--------------',
+    'show_keyword_usernames': 'Showing all usernames that match "<k>"----------------',
+    'show_keyword_usernames_in_keyword_platforms': 'Showing usernames that match "<k>" in "<p>"--------------',
 }
 
 ####################################################
@@ -324,6 +332,28 @@ def getUserInformation(password, platform, username):
 
     return decUserData
 
+def getUsernamesInPlatform(password, platform, username):
+    # EXTRACT USERNAMES FROM PLATFORM
+    # This function extracts the usernames from the database for a given username
+    # and platform. It uses the getPlatform() function to extract the data for a particular platform
+    # and then use this data to extract the name for that particular username.
+    # Accepts password as String, platform as String, username as String / Returns usernames
+    #       as list of Strings
+
+    platformData = getPlatform(password, platform)
+    userData = []
+
+    for dict in platformData:
+        # For each username dictionary returned, we iterate through them and for each username
+        # we decrypt it and compare it with the provided username. If they match, the decrypted
+        # username is added to a list which is returned back
+        for item in dict.keys():
+            extracts = decrypt(item, password + platform)
+            if username in extracts:
+                userData.append(extracts)
+
+    return userData
+
 def addPassword(passcode, platform, username, password):
     # ADDS NEW INFORMATION TO THE DATABASE
     # This function can be used to add an information set to the database. It will handle
@@ -492,6 +522,50 @@ def dumpDatabase():
     databaseFile = open('database.en','w+')
     databaseFile.write(json.dumps(database))
 
+def getPlatformNames(password, keyword = ''):
+    # GET THE **DECRYPTED** PLATFORM NAMES FROM DATABASE
+    # This function scans the database and retrievs the platforms from it
+    # NOTE: These data are decrypted and thus the returned data is NOT ENCRYPTED
+    # NOTE: This only returns the list of decrypted platform names as String
+    # NOTE: In theory, the platform name must appear only once in the database but still we do
+    #       a looping check for added safety and retrieve every appearance from a loop
+    # NOTE: This function can be used to validate if a platform already exists in the database
+    # Accepts password as String, keyword as String / Returns the retrieved data as list
+
+    platformData = []
+
+    for item in database.keys():
+        # We first take out all the keys in the database[Platforms] and for each one, we decrypt
+        # it using the password and check if it exist in the list. If not we add it
+        platform = decrypt(item, password)
+
+        if not(platform in platformData) and (keyword in platform):
+            platformData.append(platform)
+    
+    return platformData
+
+def searchUsernames(password, keyword = '', platform = ''):
+    # SEARCH USERNAME IN DATABASE
+    # This function can search the database for a particular username or all and
+    # return them back as a list of tuples with Platform and its corresponding
+    # usernames.
+    # Accept password as String, keyword as String(Default ''), platform as String(Default '') /
+    # Return platforms as a list of tuples of the form
+    # [(Platform 01, [Username 01, Username 02, ...]), (Platform 02, [Username 01, Username 02, ...]), ...]
+
+    platforms = getPlatformNames(password, platform) # Get the list of platform names
+    returnData = [] #List to be returned
+
+    # We iterate through each platform and use getUsernamesInPlatform() to get the matching
+    # usernames. If data is returned, we append them to the return variable in correct
+    # form
+    for item in platforms:
+        matches = getUsernamesInPlatform(password, item, keyword)
+        if platform in item:
+            returnData.append((item, matches))
+
+    return returnData
+
 ####################################################
 ###### PASSWORD HANDLING
 
@@ -653,6 +727,30 @@ def entryPoint():
             # Copy command. Copies an existing password in the database
             # >>> copy <platform> <username>
             copyPassword(args)
+
+        elif(response == 'platforms'):
+            # Platforms command. Shows/search all platforms in database
+            # >>> platform
+            #                   [All the platforms]
+            # >>> platform <keyword>
+            #                   [Search platform with specific keyword]
+            # >>> platform <keyword> <rows>
+            #                   [Search platform with specific keyword and list results in specified row count]
+            showPlatforms(args)
+
+        elif(response == 'usernames'):
+            # Usernames command. Shows/search all usernames in database
+            # >>> usernames
+            #                   [All the usernames in all platforms]
+            # >>> usernames <keyword>
+            #                   [Search usernames with specific keyword in all platforms]
+            # >>> usernames <keyword> <platform>
+            #                   [Search platform with specific keyword and platform]
+            # >>> usernames -a <platform>
+            #                   [All usernames in specified platform]
+            # >>> usernames <keyword/'-a'> <platform> <rows>
+            #                   [Search platform with specific keyword and platform and list results in specified row count]
+            showUsernames(args)
 
         else:
             # If unknown command is issued, show error message
@@ -994,6 +1092,139 @@ def copyPassword(args):
 
     return False
 
+def showPlatforms(args):
+    # SHOW PLATFORMS FUNCTION
+    # This allows users to list all the platforms registered in the
+    # database. They can also include a keyword as arguement to
+    # search for a matching phrase
+
+    # We first ask user to validate by entering the password
+    passcode = checkPassword()
+
+    if passcode[0]:
+        rows = 5 # Number of rows to display
+        keyword = '' # Keyword user included in arguements
+
+        if (len(args) > 1):
+            # If the arguement count is more than one, the second arguement must
+            # be an integer that define how many rows to show. If it's wrong we
+            # assume default value
+            try:
+                rows = int(args[1])
+            except:
+                print(strVals['invalid_search_args'])
+
+        if (len(args) > 0):
+            # If the arguement count is more than 0, then we have a keyword. So
+            # we extract the keyword and show a message. Otherwise we just get
+            # all entries
+            keyword = args[0]
+            print(strVals['show_keyword_platforms'].replace('<k>', keyword))
+
+        else:
+            print(strVals['show_all_platforms'])
+
+        platforms = getPlatformNames(passcode[1], keyword)
+        output = ''
+
+        # Finally we list all platforms. This is done in rows for easier visibility
+        # separated by a |
+        if len(platforms) == 0:
+            print('     ~~EMPTY~~')
+        else:
+            for i in range(len(platforms)):
+                output += platforms[i]
+
+                if (i % rows) == rows - 1:
+                    output += ' \n'
+                else:
+                    output += ' | '
+
+            output = output[:-2]
+        print(output)
+
+        return True
+
+    return False
+
+def showUsernames(args):
+    # SHOW USERNAMES FUNCTION
+    # This allows users to list all the platforms and users registered in the
+    # database. They can also include a keyword as arguement to search for
+    # a matching phrase
+
+    # We first ask user to validate by entering the password
+    passcode = checkPassword()
+
+    if passcode[0]:
+        rows = 5 # Number of rows to display
+        keyword = '' # Keyword user included in arguements
+        platform = '' # Keyword user included in arguements for platform
+
+        if (len(args) > 2):
+            # If the arguement count is more than two, the thirt arguement must
+            # be an integer that define how many rows to show. If it's wrong we
+            # assume default value
+            try:
+                rows = int(args[2])
+            except:
+                print(strVals['invalid_search_args'])
+
+        if (len(args) > 1):
+            # If the arguement count is more than 1, then we have two keyword. So
+            # we extract the keywords and show a message. Otherwise we just get
+            # all entries
+            keyword = args[0]
+            platform = args[1]
+
+            if keyword == '-a':
+                keyword = ''
+                print(strVals['show_all_usernames_in_keyword_platforms'].replace('<p>', platform))
+            else:
+                print(strVals['show_keyword_usernames_in_keyword_platforms'].replace('<p>', platform).replace('<k>', keyword))
+
+        elif (len(args) == 1):
+            # If the arguement count is exactly 1, then we have a keyword only. So
+            # we extract the keyword and show a message. Otherwise we just get
+            # all entries
+            keyword = args[0]
+            print(strVals['show_keyword_usernames'] .replace('<k>', keyword))
+
+        else:
+            # Otherwise we show all usernames
+            print(strVals['show_all_usernames'])
+
+        returnData = searchUsernames(passcode[1], keyword, platform)
+
+        # Finally we list all platforms and their usernames. This is done in rows for easier visibility
+        # separated by a |
+        if len(returnData) == 0:
+            print('     ~~EMPTY~~')
+        else:
+            for item in returnData:
+                output = ''
+                print(item[0] + ":")
+                if len(item[1]) == 0:
+                    output = '      ~~EMPTY~~'
+                else:
+                    for i in range(len(item[1])):
+                        if (i % rows) == 0:
+                            output += '     '
+
+                        output += item[1][i]
+
+                        if (i % rows) == rows - 1:
+                            output += ' \n'
+                        else:
+                            output += ' | '
+
+                    output = output[:-2]
+                print(output)
+
+        return True
+
+    return False
+
 ####################################################
 ##### Application
 
@@ -1009,12 +1240,14 @@ initialize()
 # print(getPlatform('password', 'facebook'))
 # print('\n\n')
 #newProfile([])
-addPassword('password', 'insta', 'asanka', 'helloworl')
-print(getUserInformation('password', 'insta', 'asanka'))
+# addPassword('password', 'insta', 'asanka', 'helloworl')
+# print(getUserInformation('password', 'insta', 'asanka'))
 #editProfile(input('Edit').split(' '))
 #editPassword('password', 'insta', 'asanka', 'helloworld')
 entryPoint()
-print(getUserInformation('password', 'insta', 'asanka'))
-deletePassword('password', 'insta', 'asanka')
+# print(getUserInformation('password', 'insta', 'asanka'))
+# deletePassword('password', 'insta', 'asanka')
 #deleteProfile(['insta', 'asanka'])
-print(getUserInformation('password', 'insta', 'asanka'))
+# print(getUserInformation('password', 'insta', 'asanka'))
+#showPlatforms(['a'])
+#showUsernames(['p', 'a', '1'])
