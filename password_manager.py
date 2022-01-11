@@ -56,7 +56,14 @@ database = {} # This is the database used in the application
 strVals = {
     # This database hold all the strings used in messages and inputs throughouts the application
     # These can later be set to load from a text file for ease
-    'loading_information': '------------------------------------------\n**Password Manager**\n------------------------------------------\n',
+    'loading_information': '-------------------------------------------------------------\n'\
+        '                **🔐 PASSWORD MANAGER <v>**\n'\
+        '           Manage all your passwords in one place.\n\n'\
+        ' NOTE: By using this application, you agree to accept\n'\
+        '       the license agreement.\n'\
+        ' WARNING: This application is still in the alpha\n'\
+        '       preview, only use it for testing purposes.\n'
+        '-------------------------------------------------------------\n',
     'initializing_application': 'Initializing application...',
     'no_database_found': 'No database found. Creating database...',
     'initializing_preferences': 'Loading preferences...\n',
@@ -1274,7 +1281,7 @@ def showUsernames(args):
 ##### Application
 
 # First we initialize the application
-print(strVals['loading_information'])
+print(strVals['loading_information'].replace('<v>', version))
 initialize()
 # Then we enter into the entry point to continue with the application
 # entryPoint()
