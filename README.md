@@ -59,7 +59,12 @@ Each of these parameters are encrypted individually. Fernet encryption required 
 
 ## Releases
 
-#### Version 1.0.0 Alpha (Initial) [12/01/2022]
+#### [Version 1.0.0 Alpha](https://github.com/asankaSovis/password-manager/blob/main/Releases/Python/password_manager_v1.0.0.zip) *[12/01/2022]*
+> MD5: `DAE420C84E57026B7B51DEA8E78637F2`
+>
+> SHA1: `F54C135E6257A9C3FA58B2ED953625D120AE8A1F`
+>
+> SHA256: `3E0D95A22F8514AF496E1D27B02D3A2A0C1B7A4821CDC76F5DF5D3B19C0F6591`
 - Support for Encryption
 - Add, Edit, Delete functionality
 - Viewing and copying functionality
