@@ -55,7 +55,7 @@ The database is a basic text file and data is stored to it in JSON format. Howev
 
 Each of these parameters are encrypted individually. Fernet encryption required a salt and password to decrypt text. Thus, we can modify the password to store different items in different formats.
 
-![encryption_algorithm](https://user-images.githubusercontent.com/46389631/149181043-2e608251-0466-4011-86a9-52fe80ec2310.png)
+![encryption_algorithm](https://user-images.githubusercontent.com/46389631/149184992-509823a7-61f7-43a7-8d5c-781a982cd795.png)
 
 ## Releases
 
@@ -66,6 +66,6 @@ Each of these parameters are encrypted individually. Fernet encryption required 
 - Help and About sections
 - Setting up a passcode
 
-📝 *NOTE: Throughout the application, Passcode refers to the root password set for the password manager and Password refers to the password of the application.
+📝 *NOTE: Throughout the application, Passcode refers to the root password set for the password manager and Password refers to the password of the application.*
 
-*© 2022 Asanka Sovis*
+    © 2022 Asanka Sovis
