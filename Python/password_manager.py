@@ -144,7 +144,7 @@ def initialize():
 
     print(strVals['initializing_application'])
 
-    if not(exists('database.en')):
+    if not(exists(myLocation + 'database.en')):
         # If the database doesn't exist, ask user if they like to load an existing database
         # NOTE: For now it's not doing anything. Can activate if needed
         print(strVals['no_database_found'])
@@ -168,7 +168,7 @@ def initialize():
 
     print(strVals['initializing_preferences'])
 
-    if not(exists('preferences.en')):
+    if not(exists(myLocation + 'preferences.en')):
         # If the preferences file doesn't exist,it is created
         with open(myLocation + 'preferences.en', 'w') as fp:
             fp.write('')
@@ -1352,11 +1352,15 @@ def showUsernames(args):
 ####################################################
 ##### Application
 
-# First we initialize the application
-print(strVals['loading_information'].replace('<v>', managerInfo['version']))
-initialize()
-# Then we enter into the entry point to continue with the application
-entryPoint()
+def main():
+    # First we initialize the application
+    print(strVals['loading_information'].replace('<v>', managerInfo['version']))
+    initialize()
+    # Then we enter into the entry point to continue with the application
+    entryPoint()
+
+if __name__ == '__main__':
+    main()
 
 ####################################################
 ##### DEBUG CODE
