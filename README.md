@@ -10,11 +10,11 @@ Please note that I am still learning and this project has also been a way to exp
 ## Setup
 Go to the [Releases](#releases) section. Pick a prefered release and download it. Unpack the zip file. Optionally, you can hash the password-manager.py file on a service and compare it with the provided hashes to validate. Make sure that the help.txt file is in the right place as well *(In the same folder)*. If you don't have python installed, you can install [python](https://www.python.org/downloads/). Once done, open the command prompt or terminal. Install the cryptography module using the following command.
 
-`pip install cryptography`
+    pip install cryptography
 
 Additionally, you can also install the pyperclip library as well. This is optional but the copy command will not work if you opt out.
 
-`pip install pyperclip`
+    pip install pyperclip
 
 Now you double click on the password-manager.py or run it from command prompt itself. *Enjoy!* Make sure to give feedback.
 
@@ -89,4 +89,4 @@ Each of these parameters are encrypted individually. Fernet encryption required 
 
 📝 *NOTE: Throughout the application, Passcode refers to the root password set for the password manager and Password refers to the password of the application.*
 
-    © 2022 Asanka Sovis
+`© 2022 Asanka Sovis`
