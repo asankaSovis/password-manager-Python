@@ -7,6 +7,22 @@ Please note that I am still learning and this project has also been a way to exp
 - [Cryptography](https://cryptography.io/en/latest/fernet/) - This module is used for all the cryptographic work. This is an important library.
 - [Pyperclip](https://pyperclip.readthedocs.io/en/latest/) - This module is only used for copying content to the clipboard. Can be skipped if not necessary.
 
+## Setup
+Go to the [Releases](#releases) section. Pick a prefered release and download it. Unpack the zip file. Optionally, you can hash the password-manager.py file on a service and compare it with the provided hashes to validate. Make sure that the help.txt file is in the right place as well *(In the same folder)*. If you don't have python installed, you can install [python](https://www.python.org/downloads/). Once done, open the command prompt or terminal. Install the cryptography module using the following command.
+
+`pip install cryptography`
+
+Additionally, you can also install the pyperclip library as well. This is optional but the copy command will not work if you opt out.
+
+`pip install pyperclip`
+
+Now you double click on the password-manager.py or run it from command prompt itself. *Enjoy!* Make sure to give feedback.
+
+## Initial Setup
+On opening the application for the first time, the application will create the database and preference file. This includes setting  up the salt, which requires your password. As soon as you open up for the first time, it will ask for a password. Provide a prefered password. **Make sure to remember this as it is what keeps the data protected.** Once done, you will be loaded into the application. Now you can continue to use it. Optionally, you can also backup the preference.en file created in the same directory in case of an emergency.
+
+*NOTE: The salt or password alone cannot be used to recover the data in the database. Make sure to preserve both. Also note that the application is still in the Alpha phase.*
+
 ## Usage
 The application has several useful commands built in. These allow for adding, editing, deleting and also viewing passwords to and from the database.
 - ❓ help - This command will list out help information for the application.
