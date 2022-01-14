@@ -63,13 +63,13 @@ The application has several useful commands built in. These allow for adding, ed
   - `username <keyword or -a> <platform> <rows>`    [Will list all the usernames listed in the database that match the keyword (or all if -a is provided) and platform name and will list them in the specified row count]
 
 ## Implementation
-The database is a basic text file and data is stored to it in JSON format. However, each item stored as an encrypted string, encrypted using the Fernet encryption.
+The database is a basic text file and data is stored to it in JSON format. However, each item is stored as an encrypted string, encrypted using the Fernet encryption.
 
 ![database_structure](https://user-images.githubusercontent.com/46389631/149176881-a137705f-0d34-4845-a72d-d3b02b7c2fd3.png)
 
 `{"Platform 01" : [{"User 01" : ["Password", "Modified Date"]}, ...], ...}`
 
-Each of these parameters are encrypted individually. Fernet encryption required a salt and password to decrypt text. Thus, we can modify the password to store different items in different formats.
+Each of these parameters are encrypted individually. Fernet encryption requires a salt and password to decrypt. Thus, we can modify the password to store different items in different formats.
 
 ![encryption_algorithm](https://user-images.githubusercontent.com/46389631/149184992-509823a7-61f7-43a7-8d5c-781a982cd795.png)
 
