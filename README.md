@@ -89,6 +89,11 @@ Each of these parameters are encrypted individually. Fernet encryption requires 
 - Help and About sections
 - Setting up a passcode
 
+## Fixes and Features for the Next Release
+- Fix the security issue where the key is stored on the preference file (SECURITY)
+- Fix the wrong command listed in the help.json file (BUG)
+- Add way to get a new line on command line by pressing enter (FEATURE)
+
 📝 *NOTE: Throughout the application, Passcode refers to the root password set for the password manager and Password refers to the password of the application.*
 
 `© 2022 Asanka Sovis`
