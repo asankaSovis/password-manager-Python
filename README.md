@@ -1,6 +1,12 @@
 # 🔐 Muragala Password Manager
 ![cover](https://user-images.githubusercontent.com/46389631/150689293-99441b1b-4191-485d-b155-aed74bab70b2.png)
 ---
+
+        NOTICE:
+        I am currently also porting Muragala to a C# library. Once it's done, I also plan to turn
+        it into a GUI Application. I will continue to improve the Python repo as well and it
+        will continue to act as the main place for testing the ideas and improvements.
+
 Muragala is a password manager designed to make managing passwords easy and secure. My goal is to make it a secure and reliable password manager available in the public domain for everyone to use. Privacy and security is for everyone, this is the core value behind this project. It uses [Fernet encryption](https://cryptography.io/en/latest/fernet/) to encrypt passwords and store them on a database. It uses two factor authentication with a password and randomly generated salt to encrypt the database. The application is built to be as simple as possible to make sure it's secure. On the other hand, this project is an experiment to see how to make a better security application.
 
 Please note that I am still learning and this project has also been a way to expand my knowledge. Any suggestions, issues and ideas are more than welcome. On the other hand, this application is still in its alpha phase. Therefore please don't use it solely for personal usage. It might have severe bugs and issues regarding functionality and security.
