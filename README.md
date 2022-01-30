@@ -59,10 +59,10 @@ The application has several useful commands built in. These allow for adding, ed
   - `show <platform> <username>`    [Loads the show command for the platform and username]
 - 🗒️ copy - This command will copy the password of an existing profile in the database.
   - `copy <platform> <username>`    [Loads the copy command for the platform and username]
-- 🌏 platform - This command will list out the platforms in the database.
-  - `platform`    [Will list all the platforms listed in the database]
-  - `platform <keyword>`    [Will list all the platforms listed in the database that match the keyword]
-  - `platform <keyword> <row>`    [Will list all the platforms listed in the database that match the keyword and will list them in the specified row count]
+- 🌏 platforms - This command will list out the platforms in the database.
+  - `platforms`    [Will list all the platforms listed in the database]
+  - `platforms <keyword>`    [Will list all the platforms listed in the database that match the keyword]
+  - `platforms <keyword> <row>`    [Will list all the platforms listed in the database that match the keyword and will list them in the specified row count]
 - 👩‍🦰 username - This command will list out the usernames in the database.
   - `username`    [Will list all the usernames listed in the database]
   - `username <keyword>`    [Will list all the usernames listed in the database that match the keyword]
