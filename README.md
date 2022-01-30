@@ -84,6 +84,7 @@ Each of these parameters are encrypted individually. Fernet encryption requires 
 ## Releases
 
 #### [Version 1.0.0 Alpha](https://github.com/asankaSovis/password-manager/blob/main/Releases/Python/password_manager_v1.0.0.zip) *[12/01/2022]*
+**NOTE: This is the initial release and has a security flaw**
 > MD5: `DAE420C84E57026B7B51DEA8E78637F2`
 >
 > SHA1: `F54C135E6257A9C3FA58B2ED953625D120AE8A1F`
@@ -99,6 +100,21 @@ Each of these parameters are encrypted individually. Fernet encryption requires 
 - Fix the security issue where the key is stored on the preference file (SECURITY)
 - Fix the wrong command listed in the help.json file (BUG)
 - Add way to get a new line on command line by pressing enter (FEATURE)
+
+#### [Version 2.1.1 Alpha](https://github.com/asankaSovis/password-manager/blob/main/Releases/Python/password_manager_v2.1.1.zip) *[30/01/2022]*
+**NOTE: This is a security patch**
+> MD5: `05a817d7d2a03e692aeb0524e7ca002c`
+>
+> SHA1: `e190058a3e75dda7fc203e11a5c943fe4a6fb699`
+>
+> SHA256: `74f4a8eaa0b7d18fcd40235717ff88d7c4710af5cc0d41948c39e9884613dd04`
+
+*Changelog*
+- Fixed the security key of saving the key
+- Fixed the wrong command listed in the help file
+
+## Fixes and Features for the Next Release
+- **Suggest new features**
 
 📝 *NOTE: Throughout the application, Passcode refers to the root password set for the password manager and Password refers to the password of the application.*
 
