@@ -53,11 +53,11 @@ from os.path import exists # Used to check if files exist
 
 # Application information
 managerInfo = {
-    'version': '1.0.0 Alpha',
+    'version': '2.1.1 Alpha',
     'copyright': '(C) 2022 Asanka Sovis',
     'start_date': '08/01/2022',
     'public_release': '12/01/2022',
-    'version_release': '12/01/2022'
+    'version_release': '---'
 }
 
 myLocation = os.path.dirname(os.path.abspath(__file__)) + '\\'
@@ -163,7 +163,7 @@ def initialize():
             database = json.loads(databaseFile.read())
             
         except Exception as err:
-            print(strVals['fatal_error'].replace('<l>', 'Database loading').replace('<e>', err))
+            print(strVals['fatal_error'].replace('<l>', 'Database loading').replace('<e>', str(err)))
             exit()
 
     print(strVals['initializing_preferences'])
@@ -190,7 +190,7 @@ def initialize():
             password = manualPassword()
 
             if password[0]:
-                preference['key'] = getKey(password[1]).decode()
+                preference['hash'] = getHash(password[1]).decode()
                 preferenceFile = open(myLocation + 'preferences.en','w+')
                 preferenceFile.write(json.dumps(preference))
 
@@ -205,7 +205,7 @@ def initialize():
             preference = json.loads(preferenceFile.read())
     
     except Exception as err:
-        print(strVals['fatal_error'].replace('<l>', 'Preferences loading').replace('<e>', err))
+        print(strVals['fatal_error'].replace('<l>', 'Preferences loading').replace('<e>', str(err)))
         exit()
 
 ####################################################
@@ -221,7 +221,7 @@ def encrypt(message, password):
         return getFernet(password).encrypt(message.encode()).decode()
             
     except Exception as err:
-        print(strVals['fatal_error'].replace('<l>', 'encrypt()').replace('<e>', err))
+        print(strVals['fatal_error'].replace('<l>', 'encrypt()').replace('<e>', str(err)))
         exit()
 
 def decrypt(message, password):
@@ -252,7 +252,28 @@ def getKey(password):
         return base64.urlsafe_b64encode(kdf.derive(password.encode()))
             
     except Exception as err:
-        print(strVals['fatal_error'].replace('<l>', 'getKey()').replace('<e>', err))
+        print(strVals['fatal_error'].replace('<l>', 'getKey()').replace('<e>', str(err)))
+        exit()
+
+def getHash(password):
+    # GENERATES A HASH FROM PASSWORD USING KEY AS THE SALT
+    # This function generates a hash from a given password to validate password
+    # Accepts password as String / Return Hash as base64 encoded String
+
+    global preference
+
+    kdf = PBKDF2HMAC(
+        algorithm = hashes.SHA256(),
+        length = 32,
+        salt = getKey(password),
+        iterations = 390000,
+    )
+
+    try:
+        return base64.urlsafe_b64encode(kdf.derive(password.encode()))
+            
+    except Exception as err:
+        print(strVals['fatal_error'].replace('<l>', 'getHash()').replace('<e>', str(err)))
         exit()
 
 def getFernet(password):
@@ -267,7 +288,7 @@ def getFernet(password):
         return Fernet(key)
             
     except Exception as err:
-        print(strVals['fatal_error'].replace('<l>', 'getFernet()').replace('<e>', err))
+        print(strVals['fatal_error'].replace('<l>', 'getFernet()').replace('<e>', str(err)))
         exit()
 
 ####################################################
@@ -283,7 +304,7 @@ def checkPassword():
 
     password = getpass.getpass(strVals['password_string']) # We use getpass instead of input for safety
     # NOTE: getpass hides the password while the user enteres it
-    correct = (getKey(password).decode() == preference['key']) # Compare the stored key and hashed password to validate
+    correct = (getHash(password).decode() == preference['hash']) # Compare the stored key and hashed password to validate
     # if the user entered password is valid. This is stored in correct variable as boolean for reference
 
     if not(correct):
@@ -842,11 +863,13 @@ def entryPoint():
             #                   [Search platform with specific keyword and platform and list results in specified row count]
             showUsernames(args)
 
-        else:
+        elif(response != ''):
             # If unknown command is issued, show error message
             print(strVals['unknown_commands'])
 
-        print()
+        if(response != ''):
+            # Adding an empty line
+            print()
 
 ####################################################
 ###### INTERFACE FUNCTIONS
@@ -988,7 +1011,7 @@ def newProfile(args):
 
             except Exception as err:
                 # This is for error handling
-                print(strVals['fatal_error'].replace('<l>', 'addPassword').replace('<e>', err))
+                print(strVals['fatal_error'].replace('<l>', 'addPassword').replace('<e>', str(err)))
 
                 return False
 
@@ -1035,7 +1058,7 @@ def deleteProfile(args):
 
         except Exception as err:
             # This is for error handling
-            print(strVals['fatal_error'].replace('<l>', 'deletePassword').replace('<e>', err))
+            print(strVals['fatal_error'].replace('<l>', 'deletePassword').replace('<e>', str(err)))
 
     else:
         print(strVals['invalid_delete_password_args'])
@@ -1142,7 +1165,7 @@ def editProfile(args):
 
             except Exception as err:
                 # This is for error handling
-                print(strVals['fatal_error'].replace('<l>', 'editPassword').replace('<e>', err))
+                print(strVals['fatal_error'].replace('<l>', 'editPassword').replace('<e>', str(err)))
 
                 return False
 
