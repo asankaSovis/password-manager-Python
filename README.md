@@ -17,7 +17,7 @@ Please note that I am still learning and this project has also been a way to exp
 - [Pyperclip](https://pyperclip.readthedocs.io/en/latest/) - This module is only used for copying content to the clipboard. Can be skipped if not necessary.
 
 ## Setup
-Go to the [Releases](#releases) section. Pick a prefered release and download it. Unpack the zip file. Optionally, you can hash the password-manager.py file on a service and compare it with the provided hashes to validate. Make sure that the help.txt file is in the right place as well *(In the same folder)*. If you don't have python installed, you can install [python](https://www.python.org/downloads/). Once done, open the command prompt or terminal. Install the cryptography module using the following command.
+Go to the [Releases](#releases) section. Pick a prefered release and download it. Unpack the zip file. Optionally, you can hash the password-manager.py file on a service and compare it with the provided hashes to validate. Make sure that the help.json file is in the right place as well *(In the same folder)*. If you don't have python installed, you can install [python](https://www.python.org/downloads/). Once done, open the command prompt or terminal. Install the cryptography module using the following command.
 
     pip install cryptography
 
