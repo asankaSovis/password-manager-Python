@@ -1,4 +1,4 @@
-# 🔐 Muragala Password Manager
+# 🔐 Muragala Password Manager (Python)
 ![Poster](https://user-images.githubusercontent.com/46389631/170703126-7b7b1b99-396c-4cb8-87c7-b11a7764a500.png)
 
 ---
